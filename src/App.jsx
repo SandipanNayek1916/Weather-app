@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, memo, lazy, Suspense } from 'react';
 import './styles.css';
+import './SpotlightCard.css';
 import Lenis from '@studio-freight/lenis';
 // Auth and LoginModal removed — no sign-in feature needed
 import { LogOut, Star } from 'lucide-react';
@@ -2764,6 +2765,15 @@ function App() {
       document.documentElement.style.setProperty('--mouse-y', y + 'px');
       document.documentElement.style.setProperty('--parallax-x', (((x / window.innerWidth) - 0.5) * 28) + 'px');
       document.documentElement.style.setProperty('--parallax-y', (((y / window.innerHeight) - 0.5) * 20) + 'px');
+
+      // Spotlight effect for glass-card elements
+      const card = event.target.closest('.glass-card');
+      if (card) {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--spot-x', (x - rect.left) + 'px');
+        card.style.setProperty('--spot-y', (y - rect.top) + 'px');
+        card.style.setProperty('--spot-color', 'rgba(82, 182, 255, 0.15)');
+      }
 
       setCursorState(state => {
         if (!state.visible) return { visible: true };
