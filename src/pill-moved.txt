@@ -1,0 +1,2 @@
+I have moved the floating pill to the left side and converted it to run vertically via CSS and Framer Motion changes. 
+When clicked, it will now expand outward horizontally instead of upward.

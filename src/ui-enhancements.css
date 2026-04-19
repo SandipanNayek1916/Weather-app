@@ -1,0 +1,410 @@
+/* UI Enhancements - Bento Grid, Animations & Interactivity */
+
+/* 1. Bento Grid Layouts */
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 22px;
+}
+@media (min-width: 1100px) {
+  .hero-grid {
+    grid-template-columns: 1.2fr 0.8fr;
+    grid-template-rows: auto auto;
+  }
+  .hero-copy-panel {
+    grid-row: span 2;
+  }
+}
+
+.hero-mini-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 1100px) {
+  .hero-mini-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(140px, auto);
+  }
+}
+
+.details-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  grid-auto-rows: minmax(160px, auto);
+  gap: 16px;
+}
+
+/* Make map bigger */
+.detail-card-map {
+  grid-column: span 4;
+}
+@media (min-width: 768px) {
+  .detail-card-map {
+    grid-column: span 2;
+  }
+  .detail-card-highlight {
+    grid-column: span 2;
+  }
+}
+
+/* 2. Micro-interactions & 3D Tilt preparations */
+.glass-card {
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+              border-color 0.4s ease;
+  transform-style: preserve-3d;
+}
+
+.glass-card:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  box-shadow: 
+    var(--shadow),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 8px 30px rgba(82, 182, 255, 0.15);
+  transform: translateY(-4px) scale(1.01);
+}
+
+/* Shimmer border effect on hover for cards */
+.glass-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    600px circle at var(--spot-x, 0) var(--spot-y, 0),
+    var(--spot-color, rgba(255,255,255,0)),
+    transparent 40%
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.glass-card:hover::after {
+  opacity: 1;
+}
+
+/* Flip cards */
+.flip-card-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.6s cubic-bezier(0.4, 0.0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+.flip-card.flipped .flip-card-inner {
+  transform: rotateY(180deg);
+}
+.flip-card-front, .flip-card-back {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+  left: 0;
+  top: 0;
+}
+.flip-card-back {
+  transform: rotateY(180deg);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  background: rgba(0,0,0,0.2);
+  border-radius: inherit;
+  padding: 16px;
+}
+
+/* 3. Skeleton Loading */
+.skeleton-pulse {
+  background: linear-gradient(90deg, rgba(255,255,255,0.03), rgba(255,255,255,0.08), rgba(255,255,255,0.03));
+  background-size: 200% 100%;
+  animation: skeleton-shimmer 1.5s infinite linear;
+  border-radius: 8px;
+}
+@keyframes skeleton-shimmer {
+  0% { background-position: -100% 0; }
+  100% { background-position: 100% 0; }
+}
+.skeleton-loader {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  width: 100%;
+  margin-top: 40px;
+}
+.skeleton-hero {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 22px;
+}
+@media (max-width: 1100px) {
+  .skeleton-hero {
+    grid-template-columns: 1fr;
+  }
+}
+.skeleton-hero-left {
+  padding: 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  height: 400px;
+}
+.skeleton-hero-right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.skeleton-weather-card {
+  padding: 32px;
+  height: 200px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.skeleton-card {
+  min-height: 140px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* 4. Floating Pill - Ultra Premium Vertical Side Bar */
+.floating-pill {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  margin: auto 0;
+  left: 24px;
+  height: max-content;
+  background: linear-gradient(180deg, rgba(16, 28, 48, 0.45) 0%, rgba(8, 14, 26, 0.75) 100%);
+  backdrop-filter: blur(28px) saturate(180%);
+  -webkit-backdrop-filter: blur(28px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  z-index: 1000;
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.2),
+    0 16px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
+  cursor: pointer;
+  overflow: hidden;
+  color: white;
+  border-radius: 40px;
+  width: 140px;
+  max-height: 90vh;
+  transition: box-shadow 0.35s ease, border-color 0.35s ease, width 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.floating-pill:hover {
+  box-shadow: 
+    inset 0 1px 2px rgba(255, 255, 255, 0.25),
+    0 20px 50px rgba(0, 0, 0, 0.5),
+    0 0 20px rgba(124, 242, 214, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+.floating-pill-expanded {
+  width: 460px;
+  max-width: 90vw;
+  align-items: flex-start;
+}
+.pill-summary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  font-weight: 600;
+  text-align: center;
+}
+.floating-pill-expanded .pill-summary {
+  flex-direction: row;
+  text-align: left;
+}
+.pill-icon-ring {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
+}
+.pill-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.pill-dot-day {
+  background: linear-gradient(135deg, #ffd384, #ff9d6c);
+  box-shadow: 0 0 12px #ff9d6c;
+}
+.pill-dot-night {
+  background: linear-gradient(135deg, #e0eeff, #82b6ff);
+  box-shadow: 0 0 12px #82b6ff;
+}
+.pill-divider-line {
+  width: 24px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+}
+.floating-pill-expanded .pill-divider-line {
+  width: 2px;
+  height: 24px;
+}
+.pill-temp {
+  font-size: 2rem;
+  font-weight: 800;
+  line-height: 1;
+  background: linear-gradient(180deg, #ffffff 0%, #b8d4ff 100%);
+  -webkit-background-clip: text;
+  color: transparent;
+  letter-spacing: -1px;
+}
+.pill-condition {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.3;
+}
+.pill-location-badge {
+  background: rgba(255, 255, 255, 0.06);
+  padding: 6px 12px;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  margin-top: 4px;
+  width: 100%;
+}
+.pill-location {
+  font-size: 0.8rem;
+  color: var(--accent-2, #7cf2d6);
+  letter-spacing: 0.5px;
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.pill-cities {
+  width: 100%;
+  margin-left: 20px;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pill-city-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: rgba(255, 255, 255, 0.4);
+  font-weight: 700;
+}
+.pill-city-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pill-city-btn {
+  background: linear-gradient(180deg, rgba(255,255,255,0.08) 0%, rgba(255,255,255,0.03) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 20px;
+  padding: 8px 16px;
+  color: white;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.pill-city-btn:hover {
+  background: linear-gradient(180deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.06) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+.pill-close {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  width: 36px;
+  height: 36px;
+  display: flex;
+  position: relative;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 1.2rem;
+  cursor: pointer;
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  transition: all 0.2s;
+}
+.pill-close:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: scale(1.05);
+}
+
+/* 5. Animated Numbers */
+.animated-number {
+  font-variant-numeric: tabular-nums;
+  display: inline-block;
+}
+
+/* 6. Spark Charts inline styles */
+.spark-chart {
+  margin-top: 12px;
+  width: 100%;
+}
+
+/* Glassmorphism Depth Overrides */
+.cloud-layer-front span { filter: blur(4px) !important; }
+.cloud-layer-mid span { filter: blur(8px) !important; }
+.cloud-layer-back span { filter: blur(14px) !important; }
+
+/* Enhanced App Shell Crossfade */
+.app-shell {
+  transition: background-color 1.5s ease, background-image 1.5s ease;
+}
+
+/* Refined Weather Badges */
+.weather-badge {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.weather-badge:hover {
+  transform: scale(1.08) rotate(3deg);
+}
+
+/* Expanding Details Card Hover */
+.detail-card {
+  cursor: pointer;
+}
+.detail-card::after {
+  content: "Click to expand";
+  position: absolute;
+  bottom: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: rgba(255,255,255,0.6);
+  opacity: 0;
+  transition: all 0.3s;
+}
+.detail-card:hover::after {
+  bottom: 8px;
+  opacity: 1;
+}

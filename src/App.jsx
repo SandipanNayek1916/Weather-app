@@ -6,6 +6,11 @@ import Lenis from '@studio-freight/lenis';
 import { LogOut, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NavFolder from './NavFolder.jsx';
+import AnimatedNumber from './AnimatedNumber.jsx';
+import SparkChart from './SparkChart.jsx';
+import FloatingPill from './FloatingPill.jsx';
+import SkeletonLoader from './SkeletonLoader.jsx';
+import './ui-enhancements.css';
 
 const WeatherCharts = lazy(() => import('./WeatherCharts.jsx'));
 const MapOverlay = lazy(() => import('./MapOverlay.jsx'));
@@ -1783,7 +1788,7 @@ function HeroSection(props) {
         el(
           "div",
           { className: "temperature-row" },
-          el("div", { className: "temperature-main" }, formatTemperature(props.weather.current.temperature_2m)),
+          el("div", { className: "temperature-main" }, el(AnimatedNumber, { value: props.weather.current.temperature_2m, suffix: "\u00B0C" })),
           el(
             "div",
             { className: "temperature-side" },
@@ -3109,7 +3114,7 @@ function App() {
       el(
         "main",
         { className: "page-wrap" },
-        el(LoadingBlock, { label: "Loading..." })
+        el(SkeletonLoader, null)
       )
     );
   }
@@ -3307,7 +3312,7 @@ function App() {
               el("span", null, errorMessage)
             )
             : null,
-          loading ? el(LoadingBlock, { label: "Refreshing forecast..." }) : null,
+          loading ? el(SkeletonLoader, null) : null,
           el(HeroSection, {
             weather: weatherPayload,
             air: airSnapshot,
@@ -3372,6 +3377,15 @@ function App() {
             coordinateLabel,
           })
         ),
+        el(FloatingPill, {
+          temperature: formatTemperature(weatherPayload.current.temperature_2m),
+          condition: currentTheme.label,
+          locationName: selectedLocation.name,
+          theme: theme,
+          isDay: Boolean(weatherPayload.current.is_day),
+          cities: QUICK_CITIES,
+          onSelectCity: chooseLocation,
+        }),
         el(
           "footer",
           { className: "site-footer page-wrap" },
