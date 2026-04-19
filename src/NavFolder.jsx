@@ -72,20 +72,19 @@ export default function NavFolder({ folderName = 'Navigate' }) {
           {/* === OPEN: glassmorphic dark panel matching the theme === */}
           {isOpen && (
             <motion.div
-              key="nav-open"
-              initial={{ filter: 'blur(8px)', opacity: 0 }}
-              animate={{ filter: 'blur(0px)', opacity: 1 }}
-              exit={{ filter: 'blur(8px)', opacity: 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-              style={{
-                height: '100%',
-                width: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                overflow: 'hidden',
-              }}
+               key="nav-open"
+               initial={{ filter: 'blur(8px)', opacity: 0 }}
+               animate={{ filter: 'blur(0px)', opacity: 1 }}
+               exit={{ filter: 'blur(8px)', opacity: 0 }}
+               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+               style={{
+                 height: '100%',
+                 width: '100%',
+                 display: 'flex',
+                 flexDirection: 'column',
+                 overflow: 'hidden',
+               }}
             >
-              {/* Header */}
               <div style={{
                 height: '36px',
                 width: '100%',
@@ -97,12 +96,12 @@ export default function NavFolder({ folderName = 'Navigate' }) {
                 flexShrink: 0,
               }}>
                 <span style={{
-                  color: 'var(--text-faint, rgba(225,237,248,0.54))',
-                  fontWeight: 600,
-                  fontSize: '11px',
-                  letterSpacing: '1.2px',
-                  textTransform: 'uppercase',
-                  fontFamily: 'inherit',
+                   color: 'var(--text-faint, rgba(225,237,248,0.54))',
+                   fontWeight: 600,
+                   fontSize: '11px',
+                   letterSpacing: '1.2px',
+                   textTransform: 'uppercase',
+                   fontFamily: 'inherit',
                 }}>
                   {folderName}
                 </span>
@@ -127,7 +126,6 @@ export default function NavFolder({ folderName = 'Navigate' }) {
                 </button>
               </div>
 
-              {/* Nav grid */}
               <div style={{ flex: 1, padding: '14px', overflow: 'hidden' }}>
                 <div style={{
                   display: 'grid',

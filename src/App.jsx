@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, memo, lazy, Suspense } from 'react';
 import './styles.css';
 import Lenis from '@studio-freight/lenis';
-import { useAuth } from './AuthContext.jsx';
-import LoginModal from './LoginModal.jsx';
+// Auth and LoginModal removed — no sign-in feature needed
 import { LogOut, Star } from 'lucide-react';
 import { motion } from 'framer-motion';
 import NavFolder from './NavFolder.jsx';
@@ -36,11 +35,9 @@ const STORAGE_KEYS = {
   settings: "weathernow-settings-v1",
 };
 
-const BRAND_INITIALS = "S";
 const BRAND_NAME = "Weather Website";
+const BRAND_LOGO_URL = "/weather-logo.png";
 const DEFAULT_SETTINGS = {
-  accent: "ocean",
-  cinematicMode: true,
   soundEnabled: false,
 };
 
@@ -189,11 +186,6 @@ function readStoredSettings() {
 
     const parsed = JSON.parse(raw);
     return {
-      accent: typeof parsed.accent === "string" ? parsed.accent : DEFAULT_SETTINGS.accent,
-      cinematicMode:
-        typeof parsed.cinematicMode === "boolean"
-          ? parsed.cinematicMode
-          : DEFAULT_SETTINGS.cinematicMode,
       soundEnabled:
         typeof parsed.soundEnabled === "boolean"
           ? parsed.soundEnabled
@@ -957,9 +949,13 @@ function createAmbientAudioController() {
   let masterGain = null;
   let windSource = null;
   let rainSource = null;
+  let breezeSource = null;
   let windGain = null;
   let rainGain = null;
+  let breezeGain = null;
+  let windFilter = null;
   let thunderTimer = null;
+  let cricketTimer = null;
 
   function createNoiseSource(context) {
     const buffer = context.createBuffer(1, context.sampleRate * 2, context.sampleRate);
@@ -995,8 +991,9 @@ function createAmbientAudioController() {
     masterGain.gain.value = 0.0001;
     masterGain.connect(audioContext.destination);
 
+    // Wind channel — adjustable bandpass
     windSource = createNoiseSource(audioContext);
-    const windFilter = audioContext.createBiquadFilter();
+    windFilter = audioContext.createBiquadFilter();
     windFilter.type = "bandpass";
     windFilter.frequency.value = 420;
     windFilter.Q.value = 0.35;
@@ -1007,6 +1004,7 @@ function createAmbientAudioController() {
     windGain.connect(masterGain);
     windSource.start();
 
+    // Rain channel — highpass for patter
     rainSource = createNoiseSource(audioContext);
     const rainHighpass = audioContext.createBiquadFilter();
     rainHighpass.type = "highpass";
@@ -1017,6 +1015,19 @@ function createAmbientAudioController() {
     rainHighpass.connect(rainGain);
     rainGain.connect(masterGain);
     rainSource.start();
+
+    // Breeze/ambient channel — low bandpass for gentle hum/breeze
+    breezeSource = createNoiseSource(audioContext);
+    const breezeFilter = audioContext.createBiquadFilter();
+    breezeFilter.type = "bandpass";
+    breezeFilter.frequency.value = 180;
+    breezeFilter.Q.value = 0.2;
+    breezeGain = audioContext.createGain();
+    breezeGain.gain.value = 0.0001;
+    breezeSource.connect(breezeFilter);
+    breezeFilter.connect(breezeGain);
+    breezeGain.connect(masterGain);
+    breezeSource.start();
   }
 
   function scheduleThunderIfNeeded(enabled, theme) {
@@ -1038,15 +1049,45 @@ function createAmbientAudioController() {
       const gain = audioContext.createGain();
       osc.type = "triangle";
       osc.frequency.setValueAtTime(58, audioContext.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(28, audioContext.currentTime + 1.2);
+      osc.frequency.exponentialRampToValueAtTime(22, audioContext.currentTime + 1.6);
       gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.05, audioContext.currentTime + 0.08);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 1.5);
+      gain.gain.exponentialRampToValueAtTime(0.07, audioContext.currentTime + 0.06);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 2.0);
       osc.connect(gain);
       gain.connect(masterGain);
       osc.start();
-      osc.stop(audioContext.currentTime + 1.6);
-    }, 4200);
+      osc.stop(audioContext.currentTime + 2.1);
+    }, 3800);
+  }
+
+  function scheduleCrickets(enabled, isNight) {
+    if (cricketTimer) {
+      window.clearInterval(cricketTimer);
+      cricketTimer = null;
+    }
+
+    if (!enabled || !isNight || !audioContext || !masterGain) {
+      return;
+    }
+
+    cricketTimer = window.setInterval(function playCricket() {
+      if (!audioContext || Math.random() > 0.5) {
+        return;
+      }
+
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      osc.type = "sine";
+      const freq = 3800 + Math.random() * 600;
+      osc.frequency.setValueAtTime(freq, audioContext.currentTime);
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.012, audioContext.currentTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.12);
+      osc.connect(gain);
+      gain.connect(masterGain);
+      osc.start();
+      osc.stop(audioContext.currentTime + 0.15);
+    }, 280);
   }
 
   async function update(config) {
@@ -1055,31 +1096,86 @@ function createAmbientAudioController() {
         masterGain.gain.setTargetAtTime(0.0001, audioContext.currentTime, 0.18);
       }
       scheduleThunderIfNeeded(false, config.theme);
+      scheduleCrickets(false, false);
       return;
     }
 
     await ensureContext();
 
-    if (!audioContext || !masterGain || !windGain || !rainGain) {
+    if (!audioContext || !masterGain || !windGain || !rainGain || !breezeGain) {
       return;
     }
 
-    const windLevel = clamp(Number(config.windSpeed || 0) / 34, 0.02, 0.2);
-    const rainLevel =
-      config.theme === "rain" || config.theme === "storm"
-        ? clamp(Number(config.rainAmount || 0) / 10, 0.025, 0.08)
-        : 0.0001;
+    const theme = config.theme;
+    const isNight = !config.isDay;
+    let windLevel = 0.0001;
+    let rainLevel = 0.0001;
+    let breezeLevel = 0.0001;
+    let windFreq = 420;
+    let windQ = 0.35;
+
+    if (theme === "sunny" || theme === "night") {
+      // Gentle warm breeze
+      windLevel = clamp(Number(config.windSpeed || 0) / 50, 0.01, 0.08);
+      breezeLevel = 0.04;
+      windFreq = 320;
+      windQ = 0.25;
+    } else if (theme === "cloudy") {
+      // Deeper, moodier wind
+      windLevel = clamp(Number(config.windSpeed || 0) / 38, 0.02, 0.14);
+      breezeLevel = 0.06;
+      windFreq = 280;
+      windQ = 0.3;
+    } else if (theme === "rain") {
+      // Rain patter + moderate wind
+      windLevel = clamp(Number(config.windSpeed || 0) / 34, 0.03, 0.16);
+      rainLevel = clamp(Number(config.rainAmount || 0) / 8, 0.035, 0.1);
+      breezeLevel = 0.03;
+      windFreq = 380;
+      windQ = 0.4;
+    } else if (theme === "storm") {
+      // Heavy rain + strong gusting wind
+      windLevel = clamp(Number(config.windSpeed || 0) / 28, 0.06, 0.22);
+      rainLevel = clamp(Number(config.rainAmount || 0) / 6, 0.05, 0.12);
+      breezeLevel = 0.02;
+      windFreq = 460;
+      windQ = 0.5;
+    } else if (theme === "mist") {
+      // Very soft, ethereal hum
+      windLevel = 0.02;
+      breezeLevel = 0.08;
+      windFreq = 200;
+      windQ = 0.15;
+    } else if (theme === "snow") {
+      // Quiet muffled wind
+      windLevel = clamp(Number(config.windSpeed || 0) / 45, 0.01, 0.1);
+      breezeLevel = 0.05;
+      windFreq = 250;
+      windQ = 0.2;
+    }
 
     masterGain.gain.setTargetAtTime(0.55, audioContext.currentTime, 0.2);
-    windGain.gain.setTargetAtTime(windLevel, audioContext.currentTime, 0.18);
-    rainGain.gain.setTargetAtTime(rainLevel, audioContext.currentTime, 0.18);
-    scheduleThunderIfNeeded(true, config.theme);
+    windGain.gain.setTargetAtTime(windLevel, audioContext.currentTime, 0.22);
+    rainGain.gain.setTargetAtTime(rainLevel, audioContext.currentTime, 0.22);
+    breezeGain.gain.setTargetAtTime(breezeLevel, audioContext.currentTime, 0.22);
+
+    // Smoothly shift wind filter for different tones per weather
+    windFilter.frequency.setTargetAtTime(windFreq, audioContext.currentTime, 0.3);
+    windFilter.Q.setTargetAtTime(windQ, audioContext.currentTime, 0.3);
+
+    scheduleThunderIfNeeded(true, theme);
+    scheduleCrickets(true, isNight && (theme === "sunny" || theme === "night" || theme === "cloudy"));
   }
 
   function stop() {
     if (thunderTimer) {
       window.clearInterval(thunderTimer);
       thunderTimer = null;
+    }
+
+    if (cricketTimer) {
+      window.clearInterval(cricketTimer);
+      cricketTimer = null;
     }
 
     if (masterGain && audioContext) {
@@ -1297,6 +1393,14 @@ function AmbientBackground(props) {
   const cloudDuration = `${42 - windFactor * 18}s`;
   const rainDuration = `${1.2 - rainFactor * 0.35}s`;
 
+  const isRainy = props.theme === "rain" || props.theme === "storm";
+  const isSnowy = props.theme === "snow";
+  const isCloudy = props.theme === "cloudy" || isRainy || props.theme === "mist" || isSnowy;
+  const backCloudCount = props.theme === "storm" ? 8 : isCloudy ? 6 : 3;
+  const frontCloudCount = props.theme === "storm" ? 6 : isCloudy ? 5 : 2;
+  const rainCount = props.theme === "storm" ? 48 : isRainy ? 40 : isSnowy ? 30 : 14;
+  const starCount = !props.isDay ? 18 : 10;
+
   return el(
     "div",
     {
@@ -1315,6 +1419,7 @@ function AmbientBackground(props) {
         "--parallax-y": props.pointer ? `${props.pointer.y}px` : "0px",
       },
     },
+    el("div", { className: "ambient-sky-gradient" }),
     el("div", { className: "ambient-grid" }),
     el("div", { className: "ambient-wash" }),
     el("div", { className: "ambient-noise" }),
@@ -1332,11 +1437,11 @@ function AmbientBackground(props) {
     el(
       "div",
       { className: "sun-rays" },
-      Array.from({ length: 6 }).map(function renderRay(_, index) {
+      Array.from({ length: 8 }).map(function renderRay(_, index) {
         return el("span", {
           key: `ray-${index}`,
           style: {
-            transform: `rotate(${index * 60}deg) translateY(-92px)`,
+            transform: `rotate(${index * 45}deg) translateY(-110px)`,
           },
         });
       })
@@ -1344,56 +1449,63 @@ function AmbientBackground(props) {
     el(
       "div",
       { className: "star-field" },
-      Array.from({ length: 10 }).map(function renderStar(_, index) {
+      Array.from({ length: starCount }).map(function renderStar(_, index) {
         return el("span", { key: `star-${index}` });
       })
     ),
     el(
       "div",
       { className: "meteor-layer" },
-      Array.from({ length: 1 }).map(function renderMeteor(_, index) {
+      Array.from({ length: 2 }).map(function renderMeteor(_, index) {
         return el("span", { key: `meteor-${index}` });
       })
     ),
     el(
       "div",
       { className: "cloud-layer cloud-layer-back" },
-      Array.from({ length: props.theme === "storm" ? 4 : 3 }).map(function renderCloud(_, index) {
+      Array.from({ length: backCloudCount }).map(function renderCloud(_, index) {
         return el("span", { key: `cloud-back-${index}` });
       })
     ),
     el(
       "div",
+      { className: "cloud-layer cloud-layer-mid" },
+      Array.from({ length: isCloudy ? 4 : 0 }).map(function renderCloud(_, index) {
+        return el("span", { key: `cloud-mid-${index}` });
+      })
+    ),
+    el(
+      "div",
       { className: "cloud-layer cloud-layer-front" },
-      Array.from({ length: props.theme === "storm" ? 3 : 2 }).map(function renderCloud(_, index) {
+      Array.from({ length: frontCloudCount }).map(function renderCloud(_, index) {
         return el("span", { key: `cloud-front-${index}` });
       })
     ),
     el(
       "div",
       { className: "rain-layer" },
-      Array.from({ length: props.theme === "storm" ? 20 : 14 }).map(function renderDrop(_, index) {
+      Array.from({ length: rainCount }).map(function renderDrop(_, index) {
         return el("span", { key: `rain-${index}` });
       })
     ),
     el(
       "div",
       { className: "lightning-layer" },
-      Array.from({ length: 2 }).map(function renderBolt(_, index) {
+      Array.from({ length: 3 }).map(function renderBolt(_, index) {
         return el("span", { key: `bolt-${index}` });
       })
     ),
     el(
       "div",
       { className: "ambient-particles" },
-      Array.from({ length: 6 }).map(function renderParticle(_, index) {
+      Array.from({ length: 8 }).map(function renderParticle(_, index) {
         return el("span", { key: `particle-${index}` });
       })
     ),
     el(
       "div",
       { className: "ambient-sparkles" },
-      Array.from({ length: 8 }).map(function renderSparkle(_, index) {
+      Array.from({ length: 10 }).map(function renderSparkle(_, index) {
         return el("span", { key: `ambient-sparkle-${index}` });
       })
     ),
@@ -1598,7 +1710,22 @@ function HeroSection(props) {
       el(
         "div",
         { className: "hero-subsection" },
-        el("div", { className: "subsection-title" }, "Recent searches"),
+        el(
+          "div",
+          { className: "section-heading-inline" },
+          el("div", { className: "subsection-title" }, "Recent searches"),
+          props.recentCities.length
+            ? el(
+              "button",
+              {
+                type: "button",
+                className: "city-chip city-chip-compact",
+                onClick: props.onClearRecent,
+              },
+              "Clear"
+            )
+            : null
+        ),
         props.recentCities.length
           ? el(LocationRail, {
             items: props.recentCities,
@@ -2398,18 +2525,7 @@ function ScrollReveal(props) {
 }
 
 function App() {
-  const { user, logout } = useAuth();
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [darkModeOverride, setDarkModeOverride] = useState(() => JSON.parse(localStorage.getItem('theme_dark')) || false);
-
-  useEffect(() => {
-    localStorage.setItem('theme_dark', JSON.stringify(darkModeOverride));
-    if (darkModeOverride) {
-      document.body.classList.add('dark-mode-override');
-    } else {
-      document.body.classList.remove('dark-mode-override');
-    }
-  }, [darkModeOverride]);
+  // Auth removed — no sign-in feature
 
 
   useEffect(function initLenis() {
@@ -2555,10 +2671,28 @@ function App() {
               return;
             }
 
+            let locationName = "Current location";
+            let locationAdmin1 = "";
+            let locationCountry = "";
+
+            try {
+              const reverseRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`);
+              if (reverseRes.ok) {
+                const data = await reverseRes.json();
+                if (data.city || data.locality) {
+                  locationName = data.city || data.locality;
+                  locationAdmin1 = data.principalSubdivision || "";
+                  locationCountry = data.countryName || "";
+                }
+              }
+            } catch (error) {
+              // fallback
+            }
+
             const location = {
-              name: "Current location",
-              admin1: "",
-              country: "",
+              name: locationName,
+              admin1: locationAdmin1,
+              country: locationCountry,
               latitude: position.coords.latitude,
               longitude: position.coords.longitude,
             };
@@ -2782,31 +2916,9 @@ function App() {
     });
   }
 
-  function updateAccent(accent) {
-    setSettings(function setAccent(current) {
-      return {
-        accent,
-        cinematicMode: current.cinematicMode,
-        soundEnabled: current.soundEnabled,
-      };
-    });
-  }
-
-  function toggleCinematicMode() {
-    setSettings(function toggleMode(current) {
-      return {
-        accent: current.accent,
-        cinematicMode: !current.cinematicMode,
-        soundEnabled: current.soundEnabled,
-      };
-    });
-  }
-
   function toggleSound() {
     setSettings(function toggleAudio(current) {
       return {
-        accent: current.accent,
-        cinematicMode: current.cinematicMode,
         soundEnabled: !current.soundEnabled,
       };
     });
@@ -2857,10 +2969,28 @@ function App() {
 
     navigator.geolocation.getCurrentPosition(
       async function handleSuccess(position) {
+        let locationName = "Current location";
+        let locationAdmin1 = "";
+        let locationCountry = "";
+
+        try {
+          const reverseRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${position.coords.latitude}&longitude=${position.coords.longitude}&localityLanguage=en`);
+          if (reverseRes.ok) {
+            const data = await reverseRes.json();
+            if (data.city || data.locality) {
+              locationName = data.city || data.locality;
+              locationAdmin1 = data.principalSubdivision || "";
+              locationCountry = data.countryName || "";
+            }
+          }
+        } catch (error) {
+          // fallback to default if API fails
+        }
+
         const location = {
-          name: "Current location",
-          admin1: "",
-          country: "",
+          name: locationName,
+          admin1: locationAdmin1,
+          country: locationCountry,
           latitude: position.coords.latitude,
           longitude: position.coords.longitude,
         };
@@ -2938,6 +3068,7 @@ function App() {
       audioControllerRef.current.update({
         enabled: settings.soundEnabled,
         theme: nextTheme,
+        isDay: Boolean(weatherPayload.current.is_day),
         windSpeed: weatherPayload.current.wind_speed_10m,
         rainAmount: weatherPayload.current.precipitation,
       });
@@ -3105,18 +3236,17 @@ function App() {
       {el(
         "div",
         {
-          className: `app-shell app-shell-${theme} app-shell-accent-${settings.accent} ${settings.cinematicMode ? "app-shell-cinematic" : "app-shell-calm"
-            }`,
+          className: `app-shell app-shell-${theme} app-shell-accent-ocean app-shell-cinematic`,
         },
         el(AmbientBackground, {
           theme,
           isDay: Boolean(weatherPayload.current.is_day),
           windSpeed: weatherPayload.current.wind_speed_10m,
           rainAmount: weatherPayload.current.precipitation,
-          cinematicMode: settings.cinematicMode,
+          cinematicMode: true,
           skyMotion,
           pointer: cursorState.visible
-        ? { x: 0, y: 0 } // Overridden by CSS vars in AmbientBackground now
+        ? { x: 0, y: 0 }
         : { x: 0, y: 0 },
         }),
         showIntro ? el(IntroOverlay, introProps) : null,
@@ -3134,49 +3264,15 @@ function App() {
           el(
             "a",
             { href: "#weather-app", className: "brand" },
-            el("span", { className: "brand-mark" }, BRAND_INITIALS),
+            el("img", { className: "brand-mark-img", src: BRAND_LOGO_URL, alt: "Weather App", width: 52, height: 52 }),
             el(
               "span",
               { className: "brand-copy" },
-              el("strong", null, BRAND_NAME),
-              el("span", null, "by Sandipan")
+              el("strong", null, BRAND_NAME)
             )
           ),
           h(NavFolder, { folderName: 'Navigate' }),
           el("div", { className: "topbar-tools" },
-            el("button", { className: "ghost-button topbar-toggle", onClick: () => setDarkModeOverride(!darkModeOverride) }, darkModeOverride ? "☀ Light Mode" : "☾ Dark Mode"),
-
-            user ? el("button", { className: "ghost-button ghost-button-strong topbar-toggle", onClick: logout }, "Sign Out (" + user.name + ")") : el("button", { className: "ghost-button topbar-toggle", onClick: () => setShowLoginModal(true) }, "Sign In"),
-
-            el(
-              "div",
-              { className: "accent-switcher" },
-              ["ocean", "sunset", "aurora"].map(function renderAccent(accent) {
-                return el("button", {
-                  key: accent,
-                  type: "button",
-                  className:
-                    settings.accent === accent
-                      ? `accent-dot accent-dot-${accent} accent-dot-active`
-                      : `accent-dot accent-dot-${accent}`,
-                  onClick: function handleAccent() {
-                    updateAccent(accent);
-                  },
-                  "aria-label": `${accent} accent`,
-                });
-              })
-            ),
-            el(
-              "button",
-              {
-                type: "button",
-                className: settings.cinematicMode
-                  ? "ghost-button ghost-button-strong topbar-toggle"
-                  : "ghost-button topbar-toggle",
-                onClick: toggleCinematicMode,
-              },
-              settings.cinematicMode ? "Cinematic on" : "Cinematic off"
-            ),
             el(
               "button",
               {
@@ -3186,7 +3282,7 @@ function App() {
                   : "ghost-button topbar-toggle",
                 onClick: toggleSound,
               },
-              settings.soundEnabled ? "Sound on" : "Sound off"
+              settings.soundEnabled ? "🔊 Sound on" : "🔇 Sound off"
             ),
             el("div", { className: "topbar-note" }, `Live in ${selectedLocation.name}`)
           )
@@ -3228,6 +3324,9 @@ function App() {
             favoriteCities,
             recentCities,
             isFavorite,
+            onClearRecent: function clearRecent() {
+              setRecentCities([]);
+            },
           }),
           el(AlertSection, { items: alerts }),
           el(BestTimeSection, { items: bestOutsideHours }),
@@ -3303,11 +3402,15 @@ function App() {
                 },
                 "Open-Meteo"
               )
+            ),
+            el(
+              "div",
+              { className: "footer-copyright" },
+              "© 2026 · Sandipan Nayek"
             )
           )
         )
       )}
-      <LoginModal key="login-modal" isOpen={showLoginModal} onClose={() => setShowLoginModal(false)} />
     </React.Fragment>
   );
 }
