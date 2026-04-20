@@ -31,11 +31,13 @@ export default function TiltWrapper({
   const rotateY = useSpring(useMotionValue(0), springValues);
   const scale = useSpring(1, springValues);
 
+  const rectRef = useRef(null);
+
   function handleMouse(e) {
     if (!ref.current) return;
 
-    // Calculate rotation based on mouse position relative to card center
-    const rect = ref.current.getBoundingClientRect();
+    // Use cached rect computed onMouseEnter
+    const rect = rectRef.current || ref.current.getBoundingClientRect();
     const offsetX = e.clientX - rect.left - rect.width / 2;
     const offsetY = e.clientY - rect.top - rect.height / 2;
 
@@ -47,10 +49,15 @@ export default function TiltWrapper({
   }
 
   function handleMouseEnter() {
+    // Cache the rect once on enter to avoid layout thrashing during move
+    if (ref.current) {
+      rectRef.current = ref.current.getBoundingClientRect();
+    }
     scale.set(scaleOnHover);
   }
 
   function handleMouseLeave() {
+    rectRef.current = null;
     scale.set(1);
     rotateX.set(0);
     rotateY.set(0);

@@ -1434,6 +1434,16 @@ function AmbientBackground(props) {
     el("div", { className: "ambient-noise" }),
     el(
       "div",
+      { className: "trend-graph-container", style: { height: "240px", width: "100%", position: "relative" } },
+      el(Suspense, { fallback: el("div", { className: "chart-empty" }, "Preparing graph...") },
+        el(WeatherCharts, {
+          data: props.items,
+          metric: props.metric
+        })
+      )
+    ),
+    el(
+      "div",
       { className: "aurora-ribbons" },
       Array.from({ length: 3 }).map(function renderRibbon(_, index) {
         return el("span", { key: `aurora-${index}` });
@@ -1623,7 +1633,7 @@ function SearchPanel(props) {
 }
 
 
-function HeroSection(props) {
+const HeroSection = memo(function HeroSection(props) {
   const weatherTheme = getWeatherTheme(
     props.weather.current.weather_code,
     props.weather.current.is_day
@@ -2068,7 +2078,7 @@ function HourlySection(props) {
   );
 }
 
-function AlertSection(props) {
+const AlertSection = memo(function AlertSection(props) {
   if (!props.items.length) {
     return null;
   }
@@ -2144,7 +2154,7 @@ function InsightSection(props) {
   );
 }
 
-function ForecastSection(props) {
+const ForecastSection = memo(function ForecastSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "forecast-section" },
     el(
       "div",
@@ -2167,7 +2177,7 @@ function ForecastSection(props) {
         className: "forecast-bento-scroll",
         initial: "hidden",
         whileInView: "visible",
-        viewport: { once: true, margin: "-100px" },
+        viewport: { once: true, amount: 0.1 },
         variants: {
           visible: {
             transition: {
@@ -2549,7 +2559,7 @@ function ComparisonSection(props) {
   );
 }
 
-function DetailsSection(props) {
+const DetailsSection = memo(function DetailsSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "details-section" },
     el(
       "div",
