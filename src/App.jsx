@@ -12,6 +12,7 @@ import FloatingPill from './FloatingPill.jsx';
 import SkeletonLoader from './SkeletonLoader.jsx';
 import WindParticles from './WindParticles.jsx';
 import HoloCard from './HoloCard.jsx';
+import TiltWrapper from './TiltWrapper.jsx';
 import './ui-enhancements.css';
 
 const WeatherCharts = lazy(() => import('./WeatherCharts.jsx'));
@@ -1734,8 +1735,11 @@ function HeroSection(props) {
       "div",
       { className: "hero-side-column" },
       el(
-        ScrollReveal,
-        { as: "article", className: `current-card current-card-${weatherTheme.theme} glass-card reveal-card` },
+        TiltWrapper,
+        { className: "hero-tilt-wrap" },
+        el(
+          ScrollReveal,
+          { as: "article", className: `current-card current-card-${weatherTheme.theme} glass-card reveal-card` },
         el(
           "div",
           { className: "current-card-top" },
@@ -1795,64 +1799,73 @@ function HeroSection(props) {
             el("strong", null, formatPercent(currentDay.precipitation_probability_max[0]))
           )
         )
-      ),
-      
-      el(
+      )
+    ),
+    
+    el(
         "div",
         { className: "hero-mini-grid" },
-        el(GaugeCard, {
-          label: "US AQI",
-          value: props.air.us_aqi,
-          max: 300,
-          displayValue:
-            props.air.us_aqi === null ? "--" : toRounded(props.air.us_aqi),
-          caption: getAqiLabel(props.air.us_aqi),
-          tone: "mint",
-        }),
-        el(GaugeCard, {
-          label: "UV",
-          value: props.air.uv_index,
-          max: 12,
-          displayValue: formatAirValue(props.air.uv_index, ""),
-          caption: getUvLabel(props.air.uv_index),
-          tone: "warm",
-        }),
-        el(ScrollReveal, { as: "article", className: "mini-panel glass-card reveal-card" },
-          el("div", { className: "mini-label" }, "Daylight arc"),
-          el(
-            "div",
-            { className: "sun-track" },
-            el("div", {
-              className: "sun-progress",
-              style: { width: `${clamp(daylightProgress * 100, 0, 100)}%` },
-            }),
-            el("div", {
-              className: "sun-knob",
-              style: { left: `${clamp(daylightProgress * 100, 0, 100)}%` },
-            })
-          ),
-          el(
-            "div",
-            { className: "sun-meta" },
+        el(TiltWrapper, { className: "gauge-tilt-wrap" },
+          el(GaugeCard, {
+            label: "US AQI",
+            value: props.air.us_aqi,
+            max: 300,
+            displayValue:
+              props.air.us_aqi === null ? "--" : toRounded(props.air.us_aqi),
+            caption: getAqiLabel(props.air.us_aqi),
+            tone: "mint",
+          })
+        ),
+        el(TiltWrapper, { className: "gauge-tilt-wrap" },
+          el(GaugeCard, {
+            label: "UV",
+            value: props.air.uv_index,
+            max: 12,
+            displayValue: formatAirValue(props.air.uv_index, ""),
+            caption: getUvLabel(props.air.uv_index),
+            tone: "warm",
+          })
+        ),
+        el(TiltWrapper, { className: "mini-panel-tilt-wrap" },
+          el(ScrollReveal, { as: "article", className: "mini-panel glass-card reveal-card" },
+            el("div", { className: "mini-label" }, "Daylight arc"),
             el(
               "div",
-              null,
-              el("span", null, "Sunrise"),
-              el("strong", null, formatClock(currentDay.sunrise[0]))
+              { className: "sun-track" },
+              el("div", {
+                className: "sun-progress",
+                style: { width: `${clamp(daylightProgress * 100, 0, 100)}%` },
+              }),
+              el("div", {
+                className: "sun-knob",
+                style: { left: `${clamp(daylightProgress * 100, 0, 100)}%` },
+              })
             ),
             el(
               "div",
-              null,
-              el("span", null, "Sunset"),
-              el("strong", null, formatClock(currentDay.sunset[0]))
+              { className: "sun-meta" },
+              el(
+                "div",
+                null,
+                el("span", null, "Sunrise"),
+                el("strong", null, formatClock(currentDay.sunrise[0]))
+              ),
+              el(
+                "div",
+                null,
+                el("span", null, "Sunset"),
+                el("strong", null, formatClock(currentDay.sunset[0]))
+              )
             )
           )
         ),
-        el(ScrollReveal, { as: "article", className: "mini-panel mini-panel-story glass-card reveal-card" },
-          el("div", { className: "mini-label" }, "Outdoor score"),
-          el("strong", { className: "story-value" }, props.insights.comfortScore),
-          el("div", { className: "story-title" }, props.insights.comfortLabel),
-          el("p", { className: "story-copy" }, props.insights.comfortNote)
+        el(TiltWrapper, { className: "mini-panel-tilt-wrap" },
+          el(ScrollReveal, { as: "article", className: "mini-panel mini-panel-story glass-card reveal-card" },
+            el("div", { className: "mini-label" }, "Outdoor score"),
+            el("strong", { className: "story-value" }, props.insights.comfortScore),
+            el("div", { className: "story-title" }, props.insights.comfortLabel),
+            el("p", { className: "story-copy" }, props.insights.comfortNote)
+          )
         )
       )
     )
@@ -1876,16 +1889,19 @@ function LocationRail(props) {
     props.items.map(function renderItem(city) {
       const active = sameLocation(city, props.selectedLocation);
       return el(
-        "button",
-        {
-          key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}-${roundCoordinate(city.longitude)}`,
-          type: "button",
-          className: active ? "city-chip city-chip-active" : "city-chip",
-          onClick: function handleClick() {
-            props.onChooseCity(city);
+        TiltWrapper,
+        { key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}-${roundCoordinate(city.longitude)}`, className: "chip-tilt-wrap" },
+        el(
+          "button",
+          {
+            type: "button",
+            className: active ? "city-chip city-chip-active" : "city-chip",
+            onClick: function handleClick() {
+              props.onChooseCity(city);
+            },
           },
-        },
-        city.name
+          city.name
+        )
       );
     })
   );
@@ -2012,37 +2028,40 @@ function HourlySection(props) {
         );
 
         return el(
-          "article",
-          {
-            key: `${item.time}-${item.temperature}-${item.rainChance}-${item.weatherCode}`,
-            className: "hour-card",
-          },
-          el("div", { className: "hour-time" }, formatHour(item.time)),
+          TiltWrapper,
+          { key: `${item.time}-${item.temperature}-${item.rainChance}-${item.weatherCode}`, className: "hour-card-tilt-wrap" },
           el(
-            "div",
-            { className: "hour-icon-wrap" },
-            el(WeatherGlyph, {
-              theme: theme.theme,
-              isNight: !item.isDay,
-              className: "weather-glyph weather-glyph-hour",
-              size: 28,
-            }),
-            el("div", { className: "hour-icon" }, theme.shortLabel)
-          ),
-          el("strong", { className: "hour-temp" }, formatTemperature(item.temperature)),
-          el(
-            "div",
+            "article",
             {
-              className: "hour-bar",
-              style: {
-                "--fill": `${fill}%`,
-                "--delay": `${index * 85}ms`,
-              },
+              className: "hour-card",
             },
-            el("span")
-          ),
-          el("div", { className: "hour-meta" }, `${item.rainChance}% rain chance`),
-          el("div", { className: "hour-meta" }, `${toRounded(item.wind)} km/h wind`)
+            el("div", { className: "hour-time" }, formatHour(item.time)),
+            el(
+              "div",
+              { className: "hour-icon-wrap" },
+              el(WeatherGlyph, {
+                theme: theme.theme,
+                isNight: !item.isDay,
+                className: "weather-glyph weather-glyph-hour",
+                size: 28,
+              }),
+              el("div", { className: "hour-icon" }, theme.shortLabel)
+            ),
+            el("strong", { className: "hour-temp" }, formatTemperature(item.temperature)),
+            el(
+              "div",
+              {
+                className: "hour-bar",
+                style: {
+                  "--fill": `${fill}%`,
+                  "--delay": `${index * 85}ms`,
+                },
+              },
+              el("span")
+            ),
+            el("div", { className: "hour-meta" }, `${item.rainChance}% rain chance`),
+            el("div", { className: "hour-meta" }, `${toRounded(item.wind)} km/h wind`)
+          )
         );
       })
     )
@@ -2075,13 +2094,16 @@ function AlertSection(props) {
       { className: "alert-grid" },
       props.items.map(function renderAlert(item) {
         return el(
-          "article",
-          {
-            key: `${item.title}-${item.tone}`,
-            className: `alert-card alert-card-${item.tone} glass-card`,
-          },
-          el("div", { className: "mini-label" }, item.title),
-          el("p", { className: "alert-copy" }, item.detail)
+          TiltWrapper,
+          { key: `${item.title}-${item.tone}`, className: "alert-card-tilt-wrap" },
+          el(
+            "article",
+            {
+              className: `alert-card alert-card-${item.tone} glass-card`,
+            },
+            el("div", { className: "mini-label" }, item.title),
+            el("p", { className: "alert-copy" }, item.detail)
+          )
         );
       })
     )
@@ -2093,24 +2115,30 @@ function InsightSection(props) {
     "section",
     { className: "insight-grid" },
     el(ScrollReveal, { as: "div", className: "reveal-card" },
-      el(HoloCard, { className: "insight-card glass-card" },
-        el("div", { className: "mini-label" }, "Comfort signal"),
-        el("h3", null, props.insights.comfortLabel),
-        el("p", null, props.insights.comfortNote)
+      el(TiltWrapper, { className: "insight-tilt-wrap" },
+        el(HoloCard, { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Comfort signal"),
+          el("h3", null, props.insights.comfortLabel),
+          el("p", null, props.insights.comfortNote)
+        )
       )
     ),
     el(ScrollReveal, { as: "div", className: "reveal-card" },
-      el(HoloCard, { className: "insight-card glass-card" },
-        el("div", { className: "mini-label" }, "Rain outlook"),
-        el("h3", null, props.insights.rainHeadline),
-        el("p", null, props.insights.rainNote)
+      el(TiltWrapper, { className: "insight-tilt-wrap" },
+        el(HoloCard, { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Rain outlook"),
+          el("h3", null, props.insights.rainHeadline),
+          el("p", null, props.insights.rainNote)
+        )
       )
     ),
     el(ScrollReveal, { as: "div", className: "reveal-card" },
-      el(HoloCard, { className: "insight-card glass-card" },
-        el("div", { className: "mini-label" }, "Pattern change"),
-        el("h3", null, props.insights.shiftHeadline),
-        el("p", null, props.insights.shiftNote)
+      el(TiltWrapper, { className: "insight-tilt-wrap" },
+        el(HoloCard, { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Pattern change"),
+          el("h3", null, props.insights.shiftHeadline),
+          el("p", null, props.insights.shiftNote)
+        )
       )
     )
   );
@@ -2153,72 +2181,75 @@ function ForecastSection(props) {
         const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 15, 100);
 
         return el(
-          motion.article,
-          {
-            key: `${item.date}-${item.weatherCode}`,
-            className: `forecast-card theme-${theme.theme}`,
-            variants: {
-              hidden: { opacity: 0, y: 30, scale: 0.95 },
-              visible: { opacity: 1, y: 0, scale: 1 },
+          TiltWrapper,
+          { key: `${item.date}-${item.weatherCode}`, className: "forecast-card-tilt-wrap" },
+          el(
+            motion.article,
+            {
+              className: `forecast-card theme-${theme.theme}`,
+              variants: {
+                hidden: { opacity: 0, y: 30, scale: 0.95 },
+                visible: { opacity: 1, y: 0, scale: 1 },
+              },
+              transition: { type: "spring", stiffness: 260, damping: 20 },
             },
-            transition: { type: "spring", stiffness: 260, damping: 20 },
-          },
-          el(
-            "div",
-            { className: "card-day-info" },
-            el("div", { className: "card-day-label" }, formatRelativeDay(index)),
-            el("div", { className: "card-day-name" }, formatWeekday(item.date)),
-            el("div", { className: "card-date-meta" }, formatShortDate(item.date))
-          ),
-          el(
-            "div",
-            { className: "card-visuals" },
             el(
               "div",
-              { className: "card-glyph-box" },
-              el(WeatherGlyph, {
-                theme: theme.theme,
-                isNight: false,
-                className: "weather-glyph",
-                size: 28,
-              })
-            ),
-            el("div", { className: "card-short-label" }, theme.shortLabel)
-          ),
-          el(
-            "div",
-            { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" } },
-            el(
-              "div",
-              { className: "card-temps-box" },
-              el("span", { className: "card-max-temp" }, formatTemperature(item.max)),
-              el("span", { className: "card-min-temp" }, formatTemperature(item.min))
+              { className: "card-day-info" },
+              el("div", { className: "card-day-label" }, formatRelativeDay(index)),
+              el("div", { className: "card-day-name" }, formatWeekday(item.date)),
+              el("div", { className: "card-date-meta" }, formatShortDate(item.date))
             ),
             el(
               "div",
-              { className: "vertical-temp-bar" },
-              el(motion.div, {
-                className: "vertical-temp-fill",
-                initial: { height: 0 },
-                whileInView: { height: `${temperatureSpan}%` },
-                transition: { delay: 0.2 + index * 0.1, duration: 1.5, ease: "easeOut" },
-              })
-            )
-          ),
-          el(
-            "div",
-            { className: "card-footer-meta" },
-            el(
-              "div",
-              { className: "meta-item" },
-              el("span", null, "Rain"),
-              el("span", { className: "meta-val" }, `${item.rainChance}%`)
+              { className: "card-visuals" },
+              el(
+                "div",
+                { className: "card-glyph-box" },
+                el(WeatherGlyph, {
+                  theme: theme.theme,
+                  isNight: false,
+                  className: "weather-glyph",
+                  size: 28,
+                })
+              ),
+              el("div", { className: "card-short-label" }, theme.shortLabel)
             ),
             el(
               "div",
-              { className: "meta-item", style: { textAlign: "right" } },
-              el("span", null, "UV Index"),
-              el("span", { className: "meta-val" }, toRounded(item.uv))
+              { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" } },
+              el(
+                "div",
+                { className: "card-temps-box" },
+                el("span", { className: "card-max-temp" }, formatTemperature(item.max)),
+                el("span", { className: "card-min-temp" }, formatTemperature(item.min))
+              ),
+              el(
+                "div",
+                { className: "vertical-temp-bar" },
+                el(motion.div, {
+                  className: "vertical-temp-fill",
+                  initial: { height: 0 },
+                  whileInView: { height: `${temperatureSpan}%` },
+                  transition: { delay: 0.2 + index * 0.1, duration: 1.5, ease: "easeOut" },
+                })
+              )
+            ),
+            el(
+              "div",
+              { className: "card-footer-meta" },
+              el(
+                "div",
+                { className: "meta-item" },
+                el("span", null, "Rain"),
+                el("span", { className: "meta-val" }, `${item.rainChance}%`)
+              ),
+              el(
+                "div",
+                { className: "meta-item", style: { textAlign: "right" } },
+                el("span", null, "UV Index"),
+                el("span", { className: "meta-val" }, toRounded(item.uv))
+              )
             )
           )
         );
@@ -2231,20 +2262,32 @@ function LifestyleSection(props) {
   return el(
     "section",
     { className: "insight-grid lifestyle-grid" },
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Clothing cue"),
-      el("h3", null, "Dress for the air"),
-      el("p", null, props.lifestyle.clothing)
+    el(ScrollReveal, { as: "article", className: "reveal-card" },
+      el(TiltWrapper, { className: "lifestyle-tilt-wrap" },
+        el("div", { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Clothing cue"),
+          el("h3", null, "Dress for the air"),
+          el("p", null, props.lifestyle.clothing)
+        )
+      )
     ),
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Travel advice"),
-      el("h3", null, "Move with less friction"),
-      el("p", null, props.lifestyle.travel)
+    el(ScrollReveal, { as: "article", className: "reveal-card" },
+      el(TiltWrapper, { className: "lifestyle-tilt-wrap" },
+        el("div", { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Travel advice"),
+          el("h3", null, "Move with less friction"),
+          el("p", null, props.lifestyle.travel)
+        )
+      )
     ),
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Outside window"),
-      el("h3", null, props.lifestyle.bestWindow),
-      el("p", null, props.lifestyle.outside)
+    el(ScrollReveal, { as: "article", className: "reveal-card" },
+      el(TiltWrapper, { className: "lifestyle-tilt-wrap" },
+        el("div", { className: "insight-card glass-card" },
+          el("div", { className: "mini-label" }, "Outside window"),
+          el("h3", null, props.lifestyle.bestWindow),
+          el("p", null, props.lifestyle.outside)
+        )
+      )
     )
   );
 }
@@ -2270,13 +2313,17 @@ function BestTimeSection(props) {
       "div",
       { className: "best-time-grid" },
       props.items.map(function renderHour(item) {
-        return el(ScrollReveal, { as: "article", key: item.time, className: "best-time-card glass-card reveal-card" },
-          el("div", { className: "mini-label" }, formatClock(item.time)),
-          el("strong", { className: "story-value best-time-score" }, formatTemperature(item.temperature)),
-          el(
-            "p",
-            { className: "story-copy" },
-            `${item.rainChance}% rain chance and ${toRounded(item.wind)} km/h wind.`
+        return el(ScrollReveal, { as: "article", key: item.time, className: "reveal-card" },
+          el(TiltWrapper, { className: "best-time-tilt-wrap" },
+            el("div", { className: "best-time-card glass-card" },
+              el("div", { className: "mini-label" }, formatClock(item.time)),
+              el("strong", { className: "story-value best-time-score" }, formatTemperature(item.temperature)),
+              el(
+                "p",
+                { className: "story-copy" },
+                `${item.rainChance}% rain chance and ${toRounded(item.wind)} km/h wind.`
+              )
+            )
           )
         );
       })
@@ -2289,10 +2336,14 @@ function HealthSection(props) {
     "section",
     { className: "insight-grid health-grid" },
     props.items.map(function renderItem(item) {
-      return el(ScrollReveal, { as: "article", key: item.label, className: "insight-card glass-card reveal-card health-card" },
-        el("div", { className: "mini-label" }, item.label),
-        el("h3", null, item.headline),
-        el("p", null, item.note)
+      return el(ScrollReveal, { as: "article", key: item.label, className: "reveal-card" },
+        el(TiltWrapper, { className: "health-tilt-wrap" },
+          el("div", { className: "insight-card glass-card health-card" },
+            el("div", { className: "mini-label" }, item.label),
+            el("h3", null, item.headline),
+            el("p", null, item.note)
+          )
+        )
       );
     })
   );
@@ -2300,8 +2351,10 @@ function HealthSection(props) {
 
 function MapSection(props) {
   return el(ScrollReveal, { as: "section", className: 'panel-section glass-card reveal-card', id: 'map-section' },
-    h(Suspense, { fallback: h('div', { style: { height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Geographic Radar...') },
-      h(MapOverlay, { lat: props.location?.latitude, lon: props.location?.longitude, name: props.location?.name })
+    el(TiltWrapper, { className: "map-tilt-wrap" },
+      h(Suspense, { fallback: h('div', { style: { height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Geographic Radar...') },
+        h(MapOverlay, { lat: props.location?.latitude, lon: props.location?.longitude, name: props.location?.name })
+      )
     )
   );
 }
@@ -2328,11 +2381,15 @@ function CommuteSection(props) {
       { className: "commute-grid" },
       [props.plan.morning, props.plan.evening].map(function renderWindow(item) {
         return el(
-          "article",
-          { key: item.title, className: "commute-card" },
-          el("div", { className: "mini-label" }, item.title),
-          el("h3", null, item.headline),
-          el("p", null, item.note)
+          TiltWrapper,
+          { key: item.title, className: "commute-tilt-wrap" },
+          el(
+            "article",
+            { className: "commute-card" },
+            el("div", { className: "mini-label" }, item.title),
+            el("h3", null, item.headline),
+            el("p", null, item.note)
+          )
         );
       })
     )
@@ -2341,8 +2398,10 @@ function CommuteSection(props) {
 
 function TrendSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "trend-section" },
-    h(Suspense, { fallback: h('div', { style: { height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Interactive Charts...') },
-      h(WeatherCharts, { hourly: props.hourly })
+    el(TiltWrapper, { className: "trend-tilt-wrap" },
+      h(Suspense, { fallback: h('div', { style: { height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Interactive Charts...') },
+        h(WeatherCharts, { hourly: props.hourly })
+      )
     )
   );
 }
@@ -2453,25 +2512,37 @@ function ComparisonSection(props) {
           "div",
           { className: "compare-grid" },
           el(
-            "article",
-            { className: "compare-card" },
-            el("div", { className: "mini-label" }, "Temperature"),
-            el("h3", null, props.summary.temperatureCopy),
-            el("p", null, `${props.compareLocation.name} compared with ${props.baseLocation.name}.`)
+            TiltWrapper,
+            { className: "compare-tilt-wrap" },
+            el(
+              "article",
+              { className: "compare-card" },
+              el("div", { className: "mini-label" }, "Temperature"),
+              el("h3", null, props.summary.temperatureCopy),
+              el("p", null, `${props.compareLocation.name} compared with ${props.baseLocation.name}.`)
+            )
           ),
           el(
-            "article",
-            { className: "compare-card" },
-            el("div", { className: "mini-label" }, "Rain signal"),
-            el("h3", null, props.summary.rainCopy),
-            el("p", null, "Useful for travel, errands, and outdoor planning.")
+            TiltWrapper,
+            { className: "compare-tilt-wrap" },
+            el(
+              "article",
+              { className: "compare-card" },
+              el("div", { className: "mini-label" }, "Rain signal"),
+              el("h3", null, props.summary.rainCopy),
+              el("p", null, "Useful for travel, errands, and outdoor planning.")
+            )
           ),
           el(
-            "article",
-            { className: "compare-card" },
-            el("div", { className: "mini-label" }, "Air quality"),
-            el("h3", null, props.summary.aqiCopy),
-            el("p", null, "Air differences are surfaced separately so the cleanest option is easier to spot.")
+            TiltWrapper,
+            { className: "compare-tilt-wrap" },
+            el(
+              "article",
+              { className: "compare-card" },
+              el("div", { className: "mini-label" }, "Air quality"),
+              el("h3", null, props.summary.aqiCopy),
+              el("p", null, "Air differences are surfaced separately so the cleanest option is easier to spot.")
+            )
           )
         )
         : el("div", { className: "helper-copy" }, "Choose a second city to begin comparing.")
@@ -2499,81 +2570,117 @@ function DetailsSection(props) {
       "div",
       { className: "details-grid" },
       el(
-        "article",
-        { className: "detail-card detail-card-highlight" },
-        el("div", { className: "detail-label" }, "Air quality"),
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
         el(
-          "strong",
-          { className: "detail-value" },
-          props.air.us_aqi === null ? "--" : toRounded(props.air.us_aqi)
-        ),
-        el("div", { className: "detail-support" }, getAqiLabel(props.air.us_aqi)),
-        el("div", { className: "detail-note" }, el("div", null, `PM2.5: ${formatAirValue(props.air.pm2_5, " µg/m³")}`), el("div", { style: { marginTop: "4px" } }, `PM10: ${formatAirValue(props.air.pm10, " µg/m³")}`))
+          "article",
+          { className: "detail-card detail-card-highlight" },
+          el("div", { className: "detail-label" }, "Air quality"),
+          el(
+            "strong",
+            { className: "detail-value" },
+            props.air.us_aqi === null ? "--" : toRounded(props.air.us_aqi)
+          ),
+          el("div", { className: "detail-support" }, getAqiLabel(props.air.us_aqi)),
+          el("div", { className: "detail-note" }, el("div", null, `PM2.5: ${formatAirValue(props.air.pm2_5, " µg/m³")}`), el("div", { style: { marginTop: "4px" } }, `PM10: ${formatAirValue(props.air.pm10, " µg/m³")}`))
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "Humidity"),
-        el("strong", { className: "detail-value" }, formatPercent(props.weather.current.relative_humidity_2m)),
-        el("div", { className: "detail-support" }, "Relative humidity"),
-        el("p", { className: "detail-note" }, "Helpful for understanding how sticky, dry, or comfortable the air feels.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "Humidity"),
+          el("strong", { className: "detail-value" }, formatPercent(props.weather.current.relative_humidity_2m)),
+          el("div", { className: "detail-support" }, "Relative humidity"),
+          el("p", { className: "detail-note" }, "Helpful for understanding how sticky, dry, or comfortable the air feels.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card detail-card-relative glass-card" },
-        el("div", { className: "detail-label" }, "Wind"),
-        el("strong", { className: "detail-value" }, formatWind(props.weather.current.wind_speed_10m)),
-        el("div", { className: "detail-support" }, "At 10 meters"),
-        el("p", { className: "detail-note z-10" }, "Wind can quickly change comfort, commuting ease, and rain exposure."),
-        el(WindParticles, { speed: props.weather.current.wind_speed_10m, direction: props.weather.current.wind_direction_10m })
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card detail-card-relative glass-card" },
+          el("div", { className: "detail-label" }, "Wind"),
+          el("strong", { className: "detail-value" }, formatWind(props.weather.current.wind_speed_10m)),
+          el("div", { className: "detail-support" }, "At 10 meters"),
+          el("p", { className: "detail-note z-10" }, "Wind can quickly change comfort, commuting ease, and rain exposure."),
+          el(WindParticles, { speed: props.weather.current.wind_speed_10m, direction: props.weather.current.wind_direction_10m })
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "Pressure"),
-        el("strong", { className: "detail-value" }, formatPressure(props.weather.current.surface_pressure)),
-        el("div", { className: "detail-support" }, "Surface pressure"),
-        el("p", { className: "detail-note" }, "A deeper atmospheric read that pairs well with shifting cloud and rain patterns.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "Pressure"),
+          el("strong", { className: "detail-value" }, formatPressure(props.weather.current.surface_pressure)),
+          el("div", { className: "detail-support" }, "Surface pressure"),
+          el("p", { className: "detail-note" }, "A deeper atmospheric read that pairs well with shifting cloud and rain patterns.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "UV index"),
-        el("strong", { className: "detail-value" }, formatAirValue(props.air.uv_index, "")),
-        el("div", { className: "detail-support" }, getUvLabel(props.air.uv_index)),
-        el("p", { className: "detail-note" }, "Useful for planning sun protection during your brightest hours.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "UV index"),
+          el("strong", { className: "detail-value" }, formatAirValue(props.air.uv_index, "")),
+          el("div", { className: "detail-support" }, getUvLabel(props.air.uv_index)),
+          el("p", { className: "detail-note" }, "Useful for planning sun protection during your brightest hours.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "Precipitation now"),
-        el("strong", { className: "detail-value" }, formatAirValue(props.weather.current.precipitation, " mm")),
-        el("div", { className: "detail-support" }, "Current precipitation"),
-        el("p", { className: "detail-note" }, "A real-time rain snapshot helps distinguish damp air from actual rainfall.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "Precipitation now"),
+          el("strong", { className: "detail-value" }, formatAirValue(props.weather.current.precipitation, " mm")),
+          el("div", { className: "detail-support" }, "Current precipitation"),
+          el("p", { className: "detail-note" }, "A real-time rain snapshot helps distinguish damp air from actual rainfall.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "Sunrise"),
-        el("strong", { className: "detail-value" }, formatClock(props.weather.daily.sunrise[0])),
-        el("div", { className: "detail-support" }, "Local time"),
-        el("p", { className: "detail-note" }, "Day-start timing for routines, travel, and photography windows.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "Sunrise"),
+          el("strong", { className: "detail-value" }, formatClock(props.weather.daily.sunrise[0])),
+          el("div", { className: "detail-support" }, "Local time"),
+          el("p", { className: "detail-note" }, "Day-start timing for routines, travel, and photography windows.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card" },
-        el("div", { className: "detail-label" }, "Sunset"),
-        el("strong", { className: "detail-value" }, formatClock(props.weather.daily.sunset[0])),
-        el("div", { className: "detail-support" }, "Local time"),
-        el("p", { className: "detail-note" }, "Useful for planning outdoor time before daylight fades.")
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card" },
+          el("div", { className: "detail-label" }, "Sunset"),
+          el("strong", { className: "detail-value" }, formatClock(props.weather.daily.sunset[0])),
+          el("div", { className: "detail-support" }, "Local time"),
+          el("p", { className: "detail-note" }, "Useful for planning outdoor time before daylight fades.")
+        )
       ),
       el(
-        "article",
-        { className: "detail-card detail-card-map" },
-        el("div", { className: "detail-label" }, "Selected location"),
-        el("strong", { className: "detail-value detail-value-location" }, props.locationLabel),
-        el("div", { className: "detail-support" }, `Coordinates ${props.coordinateLabel}`),
-        el("p", { className: "detail-note" }, `Timezone ${props.weather.timezone} (${props.weather.timezone_abbreviation || "local"})`)
+        TiltWrapper,
+        { className: "detail-card-tilt-wrap" },
+        el(
+          "article",
+          { className: "detail-card detail-card-map" },
+          el("div", { className: "detail-label" }, "Selected location"),
+          el("strong", { className: "detail-value detail-value-location" }, props.locationLabel),
+          el("div", { className: "detail-support" }, `Coordinates ${props.coordinateLabel}`),
+          el("p", { className: "detail-note" }, `Timezone ${props.weather.timezone} (${props.weather.timezone_abbreviation || "local"})`)
+        )
       )
     )
   );

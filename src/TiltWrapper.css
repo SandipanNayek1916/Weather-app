@@ -1,0 +1,25 @@
+.tilt-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  perspective: 1000px;
+  will-change: transform;
+  /* Ensure children can be centered/laid out as expected */
+  display: flex;
+  flex-direction: column;
+}
+
+/* On mobile, we might want to disable the tilt logic 
+   via JS or reduce intensity, but CSS perspective is harmless. */
+@media (max-width: 768px) {
+  .tilt-wrapper {
+    perspective: none;
+    transform: none !important;
+  }
+}
+
+.tilt-wrapper > * {
+  /* Prevent any clipping of the 3D children */
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
