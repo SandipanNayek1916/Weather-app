@@ -1621,31 +1621,6 @@ function SearchPanel(props) {
   );
 }
 
-function LocationRail(props) {
-  if (!props.items.length) {
-    return null;
-  }
-
-  return el(
-    "div",
-    { className: "city-rail" },
-    props.items.map(function renderCity(city) {
-      const active = sameLocation(city, props.selectedLocation);
-      return el(
-        "button",
-        {
-          key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}-${roundCoordinate(city.longitude)}`,
-          type: "button",
-          className: active ? "city-chip city-chip-active" : "city-chip",
-          onClick: function handleClick() {
-            props.onChooseCity(city);
-          },
-        },
-        city.name
-      );
-    })
-  );
-}
 
 function HeroSection(props) {
   const weatherTheme = getWeatherTheme(
@@ -1889,7 +1864,31 @@ function QuickCityRail(props) {
     items: QUICK_CITIES,
     selectedLocation: props.selectedLocation,
     onChooseCity: props.onChooseCity,
+    className: "city-rail-scroll"
   });
+}
+
+function LocationRail(props) {
+  if (!props.items.length) return null;
+  return el(
+    "div",
+    { className: `location-rail ${props.className || "location-rail-scroll"}` },
+    props.items.map(function renderItem(city) {
+      const active = sameLocation(city, props.selectedLocation);
+      return el(
+        "button",
+        {
+          key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}-${roundCoordinate(city.longitude)}`,
+          type: "button",
+          className: active ? "city-chip city-chip-active" : "city-chip",
+          onClick: function handleClick() {
+            props.onChooseCity(city);
+          },
+        },
+        city.name
+      );
+    })
+  );
 }
 
 function IntroOverlay(props) {
@@ -3199,10 +3198,7 @@ function App() {
     },
     [
       settings.soundEnabled,
-      weatherPayload ? weatherPayload.current.weather_code : null,
-      weatherPayload ? weatherPayload.current.is_day : null,
-      weatherPayload ? weatherPayload.current.wind_speed_10m : null,
-      weatherPayload ? weatherPayload.current.precipitation : null,
+      weatherPayload,
     ]
   );
 
@@ -3444,13 +3440,13 @@ function App() {
             },
             onChooseCity: chooseLocation,
             onToggleFavorite: toggleFavoriteCity,
+            onClearRecent: function clearRecent() {
+              setRecentCities([]);
+            },
             tickerItems,
             favoriteCities,
             recentCities,
             isFavorite,
-            onClearRecent: function clearRecent() {
-              setRecentCities([]);
-            },
           }),
           el(AlertSection, { items: alerts }),
           el(BestTimeSection, { items: bestOutsideHours }),
