@@ -43,10 +43,10 @@ export default function SparkChart({
     return { polyline, area, dots: pts };
   }, [data, width, height]);
 
-  if (!data.length) return null;
-
   const baseId = useId();
   const gradientId = `spark-grad-${baseId.replace(/:/g, '')}`;
+
+  if (!data.length) return null;
 
   return (
     <svg

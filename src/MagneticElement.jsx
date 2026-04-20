@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+/* eslint-disable no-unused-vars */
 import { motion, useMotionValue, useSpring } from 'framer-motion';
 
 export default function MagneticElement({ children, strength = 30, className = "" }) {

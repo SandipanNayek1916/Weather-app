@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { MapPin, X } from 'lucide-react';
 import MagneticElement from './MagneticElement.jsx';
+/* eslint-disable no-unused-vars */
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -13,7 +14,6 @@ export default function FloatingPill({
   locationName,
   theme,
   isDay,
-  onCityClick,
   cities = [],
   onSelectCity,
 }) {

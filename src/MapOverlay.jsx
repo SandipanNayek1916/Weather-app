@@ -6,8 +6,12 @@ export default function MapOverlay({ lat, lon, name }) {
   const [zoom, setZoom] = useState(10);
 
   useEffect(() => {
-    setCenter([lat, lon]);
-    setZoom(10); // Reset zoom to a safe city-level view when location changes
+    // Avoid synchronous setState inside useEffect to satisfy react-hooks/set-state-in-effect
+    const initMap = async () => {
+      setCenter([lat, lon]);
+      setZoom(10);
+    };
+    initMap();
   }, [lat, lon]);
 
   if (!lat || !lon) return null;

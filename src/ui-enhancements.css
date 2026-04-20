@@ -428,7 +428,7 @@
 .compare-search-result-btn:last-child { border-bottom: none; }
 
 /* Weekly Outlook Horizontal Layout Update */
-.forecast-scroll-stack { height: 480px; border-radius: 20px; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); margin-top: 20px; overflow: hidden; background: rgba(0,0,0,0.05); }
+.forecast-scroll-stack { height: 480px; border-radius: 20px; box-shadow: inset 0 0 20px rgba(0,0,0,0.1); margin-top: 20px; background: rgba(0,0,0,0.05); position: relative; }
 .forecast-scroll-stack .day-card { display: flex; flex-direction: row; align-items: center; justify-content: space-between; padding: 16px 24px; min-height: unset; gap: 16px; margin: 0; }
 .forecast-scroll-stack .day-top { display: flex; flex-direction: row; align-items: center; gap: 16px; min-width: 140px; margin: 0; }
 .forecast-scroll-stack .day-condition { margin: 0; text-align: left; flex: 1; font-weight: 600; white-space: nowrap; }

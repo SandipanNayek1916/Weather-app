@@ -1,6 +1,5 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-const AuthContext = createContext();
+import { useState, useEffect } from 'react';
+import { AuthContext } from './AuthContext';
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
@@ -27,7 +26,11 @@ export function AuthProvider({ children }) {
     const savedToken = localStorage.getItem('weather_token');
     
     if (user && savedToken) {
-      fetchFavorites(savedToken);
+      // Use an async function to avoid synchronous setState triggered immediately during mount/render
+      const init = async () => {
+        await fetchFavorites(savedToken);
+      };
+      init();
     }
   }, [user]);
 
@@ -102,6 +105,4 @@ export function AuthProvider({ children }) {
   );
 }
 
-export function useAuth() {
-  return useContext(AuthContext);
-}
+

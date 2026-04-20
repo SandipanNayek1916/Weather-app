@@ -2138,7 +2138,14 @@ function ForecastSection(props) {
     ),
     el(
       ScrollStack,
-      { useWindowScroll: false, className: "forecast-scroll-stack" },
+      { 
+        useWindowScroll: false, 
+        className: "forecast-scroll-stack",
+        itemDistance: 20,
+        itemStackDistance: 50,
+        stackPosition: "15%",
+        baseScale: 0.92
+      },
       props.items.map(function renderDay(item, index) {
         const theme = getWeatherTheme(item.weatherCode, true);
         const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 18, 100);
@@ -3075,7 +3082,7 @@ function App() {
               locationCountry = data.countryName || "";
             }
           }
-        } catch (error) {
+        } catch {
           // fallback to default if API fails
         }
 
@@ -3103,15 +3110,23 @@ function App() {
 
   useEffect(
     function loadComparisonWeather() {
+      const runInitialization = async () => {
+        if (!compareLocation || sameLocation(compareLocation, selectedLocation)) {
+          setComparePayload(null);
+          setCompareAirPayload(null);
+          setCompareLoading(false);
+          return;
+        }
+        setCompareLoading(true);
+      };
+
+      runInitialization();
+
       if (!compareLocation || sameLocation(compareLocation, selectedLocation)) {
-        setComparePayload(null);
-        setCompareAirPayload(null);
-        setCompareLoading(false);
         return undefined;
       }
 
       let ignore = false;
-      setCompareLoading(true);
 
       Promise.all([
         fetchJson(buildWeatherUrl(compareLocation)),

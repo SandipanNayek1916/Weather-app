@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+/* eslint-disable no-unused-vars */
 import { AnimatePresence, motion } from 'framer-motion';
 import { X, Clock, CalendarDays, BarChart3, GitCompareArrows, Map, Info, FolderOpen } from 'lucide-react';
 
