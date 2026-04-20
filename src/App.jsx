@@ -10,8 +10,6 @@ import AnimatedNumber from './AnimatedNumber.jsx';
 import SparkChart from './SparkChart.jsx';
 import FloatingPill from './FloatingPill.jsx';
 import SkeletonLoader from './SkeletonLoader.jsx';
-import ScrollStack, { ScrollStackItem } from './ScrollStack.jsx';
-import MagneticElement from './MagneticElement.jsx';
 import WindParticles from './WindParticles.jsx';
 import HoloCard from './HoloCard.jsx';
 import './ui-enhancements.css';
@@ -2137,76 +2135,95 @@ function ForecastSection(props) {
       )
     ),
     el(
-      ScrollStack,
-      { 
-        useWindowScroll: false, 
-        className: "forecast-scroll-stack",
-        itemDistance: 20,
-        itemStackDistance: 50,
-        stackPosition: "15%",
-        baseScale: 0.92
+      motion.div,
+      {
+        className: "forecast-bento-scroll",
+        initial: "hidden",
+        whileInView: "visible",
+        viewport: { once: true, margin: "-100px" },
+        variants: {
+          visible: {
+            transition: {
+              staggerChildren: 0.1,
+            },
+          },
+        },
       },
       props.items.map(function renderDay(item, index) {
         const theme = getWeatherTheme(item.weatherCode, true);
-        const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 18, 100);
+        const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 15, 100);
 
         return el(
-          ScrollStackItem,
-          { key: `${item.date}-${item.weatherCode}` },
-          el(
-            "article",
-            {
-              className: "day-card glass-card",
+          motion.article,
+          {
+            key: `${item.date}-${item.weatherCode}`,
+            className: `forecast-card theme-${theme.theme}`,
+            variants: {
+              hidden: { opacity: 0, y: 30, scale: 0.95 },
+              visible: { opacity: 1, y: 0, scale: 1 },
             },
-            el(
+            transition: { type: "spring", stiffness: 260, damping: 20 },
+          },
+          el(
             "div",
-            { className: "day-top" },
+            { className: "card-day-info" },
+            el("div", { className: "card-day-label" }, formatRelativeDay(index)),
+            el("div", { className: "card-day-name" }, formatWeekday(item.date)),
+            el("div", { className: "card-date-meta" }, formatShortDate(item.date))
+          ),
+          el(
+            "div",
+            { className: "card-visuals" },
             el(
               "div",
-              null,
-              el("div", { className: "mini-label" }, formatRelativeDay(index)),
-              el("strong", { className: "day-name" }, formatWeekday(item.date)),
-              el("div", { className: "card-subtle" }, formatShortDate(item.date))
-            ),
-            el(
-              "div",
-              { className: "weather-badge weather-badge-small weather-badge-icon" },
+              { className: "card-glyph-box" },
               el(WeatherGlyph, {
                 theme: theme.theme,
                 isNight: false,
-                className: "weather-glyph weather-glyph-day",
-                size: 22,
-              }),
-              el("span", null, theme.shortLabel)
+                className: "weather-glyph",
+                size: 28,
+              })
+            ),
+            el("div", { className: "card-short-label" }, theme.shortLabel)
+          ),
+          el(
+            "div",
+            { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" } },
+            el(
+              "div",
+              { className: "card-temps-box" },
+              el("span", { className: "card-max-temp" }, formatTemperature(item.max)),
+              el("span", { className: "card-min-temp" }, formatTemperature(item.min))
+            ),
+            el(
+              "div",
+              { className: "vertical-temp-bar" },
+              el(motion.div, {
+                className: "vertical-temp-fill",
+                initial: { height: 0 },
+                whileInView: { height: `${temperatureSpan}%` },
+                transition: { delay: 0.2 + index * 0.1, duration: 1.5, ease: "easeOut" },
+              })
             )
           ),
-          el("div", { className: "day-condition" }, theme.label),
           el(
             "div",
-            { className: "day-temps" },
-            el("strong", null, formatTemperature(item.max)),
-            el("span", null, formatTemperature(item.min))
-          ),
-          el(
-            "div",
-            {
-              className: "temp-span-track",
-              style: {
-                "--fill": `${temperatureSpan}%`,
-                "--delay": `${index * 95}ms`,
-              },
-            },
-            el("span")
-          ),
-          el(
-            "div",
-            { className: "day-meta-row" },
-            el("span", null, `${item.rainChance}% rain`),
-            el("span", null, `UV ${toRounded(item.uv)}`)
+            { className: "card-footer-meta" },
+            el(
+              "div",
+              { className: "meta-item" },
+              el("span", null, "Rain"),
+              el("span", { className: "meta-val" }, `${item.rainChance}%`)
+            ),
+            el(
+              "div",
+              { className: "meta-item", style: { textAlign: "right" } },
+              el("span", null, "UV Index"),
+              el("span", { className: "meta-val" }, toRounded(item.uv))
+            )
           )
-        )
-      );
-    })
+        );
+      })
     )
   );
 }
