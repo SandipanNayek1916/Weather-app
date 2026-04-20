@@ -10,6 +10,10 @@ import AnimatedNumber from './AnimatedNumber.jsx';
 import SparkChart from './SparkChart.jsx';
 import FloatingPill from './FloatingPill.jsx';
 import SkeletonLoader from './SkeletonLoader.jsx';
+import ScrollStack, { ScrollStackItem } from './ScrollStack.jsx';
+import MagneticElement from './MagneticElement.jsx';
+import WindParticles from './WindParticles.jsx';
+import HoloCard from './HoloCard.jsx';
 import './ui-enhancements.css';
 
 const WeatherCharts = lazy(() => import('./WeatherCharts.jsx'));
@@ -2061,11 +2065,11 @@ function AlertSection(props) {
         "div",
         null,
         el("div", { className: "eyebrow" }, "Live signals"),
-        el("h2", null, "Today highlights"),
+        el("h2", null, "Active alerts"),
         el(
           "p",
           { className: "section-copy" },
-          "The strongest weather changes are surfaced here so the dashboard stays useful at a glance."
+          "Urgent meteorological conditions and live signals are surfaced here."
         )
       )
     ),
@@ -2091,20 +2095,26 @@ function InsightSection(props) {
   return el(
     "section",
     { className: "insight-grid" },
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Comfort signal"),
-      el("h3", null, props.insights.comfortLabel),
-      el("p", null, props.insights.comfortNote)
+    el(ScrollReveal, { as: "div", className: "reveal-card" },
+      el(HoloCard, { className: "insight-card glass-card" },
+        el("div", { className: "mini-label" }, "Comfort signal"),
+        el("h3", null, props.insights.comfortLabel),
+        el("p", null, props.insights.comfortNote)
+      )
     ),
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Rain outlook"),
-      el("h3", null, props.insights.rainHeadline),
-      el("p", null, props.insights.rainNote)
+    el(ScrollReveal, { as: "div", className: "reveal-card" },
+      el(HoloCard, { className: "insight-card glass-card" },
+        el("div", { className: "mini-label" }, "Rain outlook"),
+        el("h3", null, props.insights.rainHeadline),
+        el("p", null, props.insights.rainNote)
+      )
     ),
-    el(ScrollReveal, { as: "article", className: "insight-card glass-card reveal-card" },
-      el("div", { className: "mini-label" }, "Pattern change"),
-      el("h3", null, props.insights.shiftHeadline),
-      el("p", null, props.insights.shiftNote)
+    el(ScrollReveal, { as: "div", className: "reveal-card" },
+      el(HoloCard, { className: "insight-card glass-card" },
+        el("div", { className: "mini-label" }, "Pattern change"),
+        el("h3", null, props.insights.shiftHeadline),
+        el("p", null, props.insights.shiftNote)
+      )
     )
   );
 }
@@ -2127,19 +2137,21 @@ function ForecastSection(props) {
       )
     ),
     el(
-      "div",
-      { className: "daily-grid" },
+      ScrollStack,
+      { useWindowScroll: false, className: "forecast-scroll-stack" },
       props.items.map(function renderDay(item, index) {
         const theme = getWeatherTheme(item.weatherCode, true);
         const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 18, 100);
 
         return el(
-          "article",
-          {
-            key: `${item.date}-${item.max}-${item.min}-${item.rainChance}-${item.weatherCode}`,
-            className: "day-card",
-          },
+          ScrollStackItem,
+          { key: `${item.date}-${item.weatherCode}` },
           el(
+            "article",
+            {
+              className: "day-card glass-card",
+            },
+            el(
             "div",
             { className: "day-top" },
             el(
@@ -2185,8 +2197,9 @@ function ForecastSection(props) {
             el("span", null, `${item.rainChance}% rain`),
             el("span", null, `UV ${toRounded(item.uv)}`)
           )
-        );
-      })
+        )
+      );
+    })
     )
   );
 }
@@ -2311,6 +2324,68 @@ function TrendSection(props) {
   );
 }
 
+function ComparisonSearch({ onSelect }) {
+  const [query, setQuery] = useState("");
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (query.trim().length < 2) {
+      setResults([]);
+      return;
+    }
+    setLoading(true);
+    let ignore = false;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await searchLocations(query.trim());
+        if (!ignore) {
+          runTransition(() => setResults(res));
+        }
+      } catch (e) {} finally {
+        if (!ignore) setLoading(false);
+      }
+    }, 400);
+    return () => {
+      ignore = true;
+      clearTimeout(timer);
+    };
+  }, [query]);
+
+  return el(
+    "div",
+    { className: "compare-search-wrapper" },
+    el("input", {
+      className: "compare-search-input",
+      placeholder: "Search any city globally to compare...",
+      value: query,
+      onChange: (e) => setQuery(e.target.value),
+    }),
+    loading ? el("div", { className: "compare-search-loader" }, "Searching...") : null,
+    results.length > 0
+      ? el(
+          "div",
+          { className: "compare-search-results glass-card" },
+          results.map((city) =>
+            el(
+              "button",
+              {
+                key: `${city.name}-${city.latitude}`,
+                className: "compare-search-result-btn",
+                onClick: () => {
+                  setQuery("");
+                  setResults([]);
+                  onSelect(city);
+                },
+              },
+              `${city.name}, ${city.admin1 || city.country}`
+            )
+          )
+        )
+      : null
+  );
+}
+
 function ComparisonSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "compare-section" },
     el(
@@ -2328,6 +2403,7 @@ function ComparisonSection(props) {
         )
       )
     ),
+    el(ComparisonSearch, { onSelect: props.onCompareChange }),
     el(
       "div",
       { className: "compare-city-row" },
@@ -2387,12 +2463,12 @@ function DetailsSection(props) {
       el(
         "div",
         null,
-        el("div", { className: "eyebrow" }, "Detailed atmosphere"),
-        el("h2", null, "Weather details and signals"),
+        el("div", { className: "eyebrow" }, "Current conditions"),
+        el("h2", null, "Today highlights"),
         el(
           "p",
           { className: "section-copy" },
-          "Everything is still balanced around your original choices: temperature, humidity, wind, pressure, UV, air quality, and solar timing."
+          "A quick glance at all vital atmospheric data and solar timing for today."
         )
       )
     ),
@@ -2421,11 +2497,12 @@ function DetailsSection(props) {
       ),
       el(
         "article",
-        { className: "detail-card" },
+        { className: "detail-card detail-card-relative glass-card" },
         el("div", { className: "detail-label" }, "Wind"),
         el("strong", { className: "detail-value" }, formatWind(props.weather.current.wind_speed_10m)),
         el("div", { className: "detail-support" }, "At 10 meters"),
-        el("p", { className: "detail-note" }, "Wind can quickly change comfort, commuting ease, and rain exposure.")
+        el("p", { className: "detail-note z-10" }, "Wind can quickly change comfort, commuting ease, and rain exposure."),
+        el(WindParticles, { speed: props.weather.current.wind_speed_10m, direction: props.weather.current.wind_direction_10m })
       ),
       el(
         "article",

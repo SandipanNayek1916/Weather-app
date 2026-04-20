@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useId } from 'react';
 
 /**
  * SparkChart — tiny inline SVG sparkline chart.
@@ -45,7 +45,8 @@ export default function SparkChart({
 
   if (!data.length) return null;
 
-  const gradientId = `spark-grad-${Math.random().toString(36).slice(2, 8)}`;
+  const baseId = useId();
+  const gradientId = `spark-grad-${baseId.replace(/:/g, '')}`;
 
   return (
     <svg

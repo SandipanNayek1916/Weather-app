@@ -1,0 +1,41 @@
+.holo-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 20px;
+  background: var(--card-bg, rgba(20, 30, 45, 0.4));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  will-change: transform;
+}
+
+.holo-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 5;
+  transition: opacity 0.4s ease;
+}
+
+.holo-foil {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  background-image: linear-gradient(
+    115deg,
+    transparent 0%,
+    rgba(255, 100, 200, 0.15) 25%,
+    rgba(100, 255, 200, 0.15) 50%,
+    rgba(100, 100, 255, 0.15) 75%,
+    transparent 100%
+  );
+  background-size: 300% 300%;
+  mix-blend-mode: color-dodge;
+  transition: opacity 0.4s ease;
+}
+
+.holo-content {
+  position: relative;
+  z-index: 10;
+  height: 100%;
+  transform: translateZ(20px); /* Lifts the content to give 3D parallax over the foil */
+}

@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
+import { MapPin, X } from 'lucide-react';
+import MagneticElement from './MagneticElement.jsx';
 import { motion, AnimatePresence } from 'framer-motion';
 
 /**
@@ -89,17 +91,18 @@ export default function FloatingPill({
               <div className="pill-city-label">Quick switch</div>
               <div className="pill-city-row">
                 {cities.slice(0, 5).map((city) => (
-                  <button
-                    key={`${city.name}-${city.latitude}`}
-                    className="pill-city-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectCity(city);
-                      setExpanded(false);
-                    }}
-                  >
-                    {city.name}
-                  </button>
+                  <MagneticElement key={`${city.name}-${city.latitude}`} strength={20}>
+                    <button
+                      className="pill-city-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectCity(city);
+                        setExpanded(false);
+                      }}
+                    >
+                      {city.name}
+                    </button>
+                  </MagneticElement>
                 ))}
               </div>
               <button
