@@ -89,22 +89,22 @@ const WEATHER_CODE_MAP = {
   3: { label: "Overcast", shortLabel: "OVR", theme: "cloudy" },
   45: { label: "Fog", shortLabel: "FOG", theme: "mist" },
   48: { label: "Rime fog", shortLabel: "FOG", theme: "mist" },
-  51: { label: "Light drizzle", shortLabel: "DRZ", theme: "rain" },
-  53: { label: "Drizzle", shortLabel: "DRZ", theme: "rain" },
-  55: { label: "Heavy drizzle", shortLabel: "DRZ", theme: "rain" },
-  56: { label: "Freezing drizzle", shortLabel: "ICE", theme: "rain" },
-  57: { label: "Dense freezing drizzle", shortLabel: "ICE", theme: "rain" },
-  61: { label: "Light rain", shortLabel: "RAN", theme: "rain" },
-  63: { label: "Rain", shortLabel: "RAN", theme: "rain" },
-  65: { label: "Heavy rain", shortLabel: "RAN", theme: "rain" },
-  66: { label: "Freezing rain", shortLabel: "ICE", theme: "rain" },
-  67: { label: "Heavy freezing rain", shortLabel: "ICE", theme: "rain" },
+  51: { label: "Light drizzle", shortLabel: "DRZ", theme: "rainy" },
+  53: { label: "Drizzle", shortLabel: "DRZ", theme: "rainy" },
+  55: { label: "Heavy drizzle", shortLabel: "DRZ", theme: "rainy" },
+  56: { label: "Freezing drizzle", shortLabel: "ICE", theme: "rainy" },
+  57: { label: "Dense freezing drizzle", shortLabel: "ICE", theme: "rainy" },
+  61: { label: "Light rain", shortLabel: "RAN", theme: "rainy" },
+  63: { label: "Rain", shortLabel: "RAN", theme: "rainy" },
+  65: { label: "Heavy rain", shortLabel: "RAN", theme: "rainy" },
+  66: { label: "Freezing rain", shortLabel: "ICE", theme: "rainy" },
+  67: { label: "Heavy freezing rain", shortLabel: "ICE", theme: "rainy" },
   71: { label: "Light snow", shortLabel: "SNO", theme: "snow" },
   73: { label: "Snow", shortLabel: "SNO", theme: "snow" },
   75: { label: "Heavy snow", shortLabel: "SNO", theme: "snow" },
   77: { label: "Snow grains", shortLabel: "SNO", theme: "snow" },
-  80: { label: "Rain showers", shortLabel: "SHR", theme: "rain" },
-  81: { label: "Heavy showers", shortLabel: "SHR", theme: "rain" },
+  80: { label: "Rain showers", shortLabel: "SHR", theme: "rainy" },
+  81: { label: "Heavy showers", shortLabel: "SHR", theme: "rainy" },
   82: { label: "Violent showers", shortLabel: "SHR", theme: "storm" },
   85: { label: "Snow showers", shortLabel: "SNO", theme: "snow" },
   86: { label: "Heavy snow showers", shortLabel: "SNO", theme: "snow" },
@@ -151,6 +151,16 @@ function pushUniqueLocation(list, location, maxItems) {
   );
 
   return nextItems.slice(0, maxItems);
+}
+
+function removeDuplicateLocations(list) {
+  const result = [];
+  list.forEach(function (item) {
+    if (!result.some(function (r) { return sameLocation(r, item); })) {
+      result.push(item);
+    }
+  });
+  return result;
 }
 
 function readStoredLocations(key) {
@@ -228,6 +238,11 @@ function getWeatherTheme(weatherCode, isDay) {
     };
   }
 
+  // Handle rain/rainy alias
+  if (base.theme === "rain") {
+    return { ...base, theme: "rainy" };
+  }
+
   return base;
 }
 
@@ -272,28 +287,46 @@ function formatHour(dateString) {
   });
 }
 
+function parseLocalDate(dateString) {
+  // Parses "YYYY-MM-DD" as a local date to avoid timezone day-shift bugs
+  if (!dateString || typeof dateString !== 'string') return new Date();
+  const [y, m, d] = dateString.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function formatWeekday(dateString) {
-  return new Date(dateString).toLocaleDateString([], {
+  return parseLocalDate(dateString).toLocaleDateString([], {
     weekday: "short",
   });
 }
 
 function formatShortDate(dateString) {
-  return new Date(dateString).toLocaleDateString([], {
+  return parseLocalDate(dateString).toLocaleDateString([], {
     month: "short",
     day: "numeric",
   });
 }
 
-function formatRelativeDay(index) {
-  if (index === 0) {
-    return "Today";
+function formatRelativeDay(index, dateString, currentCityTime) {
+  // If we have access to city's "Today" date, use it for accuracy
+  if (dateString && currentCityTime) {
+    const itemDate = dateString.split('T')[0];
+    const todayDate = currentCityTime.split('T')[0];
+    
+    if (itemDate === todayDate) return "Today";
+    
+    // Future estimation
+    const itemMs = parseLocalDate(itemDate).getTime();
+    const todayMs = parseLocalDate(todayDate).getTime();
+    const diffDays = Math.round((itemMs - todayMs) / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 1) return "Tomorrow";
+    if (diffDays > 1) return `${diffDays}d out`;
   }
 
-  if (index === 1) {
-    return "Tomorrow";
-  }
-
+  // Fallback to index-based logic
+  if (index === 0) return "Today";
+  if (index === 1) return "Tomorrow";
   return `${index}d out`;
 }
 
@@ -944,6 +977,231 @@ function getSkyMotion(currentTime, sunrise, sunset, isDay) {
   };
 }
 
+/* ------------------------------------------------------------------
+   computeSkyGradient — returns a live CSS gradient string based on
+   the searched city's local time (extracted directly from ISO string)
+   ------------------------------------------------------------------ */
+function computeSkyGradient(currentTimeStr) {
+  if (!currentTimeStr) return null;
+  const timePart = String(currentTimeStr).split('T')[1];
+  if (!timePart) return null;
+  const [hStr, mStr] = timePart.split(':');
+  const hours = parseInt(hStr, 10) || 0;
+  const minutes = parseInt(mStr, 10) || 0;
+  const frac = (hours * 60 + minutes) / 1440;
+  // [fraction, [top, mid, bottom]] waypoints through the day
+  const W = [
+    [0.000, ['#050812', '#080e1e', '#0c1428']],
+    [0.167, ['#07101e', '#0d1830', '#111e3a']],
+    [0.208, ['#1a1440', '#7b2c60', '#e05c45']],
+    [0.250, ['#2a3898', '#d66b3a', '#f0b040']],
+    [0.292, ['#1060c8', '#4898de', '#82bcee']],
+    [0.417, ['#1278d8', '#3e9ee2', '#6ab8f0']],
+    [0.500, ['#1285e8', '#3aa2ea', '#5ab8f5']],
+    [0.583, ['#1278d0', '#3898dc', '#60aee8']],
+    [0.667, ['#1060b8', '#4080c0', '#80a8d8']],
+    [0.708, ['#e06020', '#f09030', '#f8c850']],
+    [0.750, ['#c04060', '#6828a0', '#1a183c']],
+    [0.792, ['#160e38', '#110c30', '#0e1028']],
+    [0.833, ['#0a0c1a', '#0c1122', '#0f1628']],
+    [1.000, ['#050812', '#080e1e', '#0c1428']],
+  ];
+  let lo = W[0], hi = W[W.length - 1];
+  for (let i = 0; i < W.length - 1; i++) {
+    if (frac >= W[i][0] && frac <= W[i + 1][0]) { lo = W[i]; hi = W[i + 1]; break; }
+  }
+  const t = lo[0] === hi[0] ? 0 : (frac - lo[0]) / (hi[0] - lo[0]);
+  function h2r(h) { return [parseInt(h.slice(1,3),16), parseInt(h.slice(3,5),16), parseInt(h.slice(5,7),16)]; }
+  function lerpClr(c1, c2, t) {
+    const [r1,g1,b1] = h2r(c1), [r2,g2,b2] = h2r(c2);
+    return `rgb(${Math.round(r1+(r2-r1)*t)},${Math.round(g1+(g2-g1)*t)},${Math.round(b1+(b2-b1)*t)})`;
+  }
+  return `linear-gradient(180deg,${lerpClr(lo[1][0],hi[1][0],t)} 0%,${lerpClr(lo[1][1],hi[1][1],t)} 42%,${lerpClr(lo[1][2],hi[1][2],t)} 100%)`;
+}
+
+/* ------------------------------------------------------------------
+   ComfortRing — Apple-Watch-style 270° radial arc gauge
+   ------------------------------------------------------------------ */
+function ComfortRing({ score, label, note }) {
+  const safeScore = clamp(Number(score) || 0, 0, 100);
+  const r = 44;
+  const circ = 2 * Math.PI * r;
+  const arcLen = circ * 0.75;
+  const gapLen = circ - arcLen;
+  const fillLen = (safeScore / 100) * arcLen;
+  const fillOffset = arcLen - fillLen;
+
+  return el('div', { className: 'comfort-ring-wrap' },
+    el('div', { className: 'comfort-ring' },
+      el('svg', { viewBox: '0 0 100 100', className: 'comfort-ring-svg', role: 'img', 'aria-label': `Comfort score ${safeScore} out of 100` },
+        el('defs', null,
+          el('linearGradient', { id: 'cr-gradient', gradientUnits: 'userSpaceOnUse', x1: '5', y1: '95', x2: '95', y2: '5' },
+            el('stop', { offset: '0%', stopColor: '#ff6b8a' }),
+            el('stop', { offset: '45%', stopColor: '#ffb347' }),
+            el('stop', { offset: '100%', stopColor: '#7cf2d6' })
+          )
+        ),
+        el('circle', {
+          cx: 50, cy: 50, r,
+          fill: 'none',
+          stroke: 'rgba(255,255,255,0.07)',
+          strokeWidth: 8,
+          strokeLinecap: 'round',
+          strokeDasharray: `${arcLen.toFixed(2)} ${gapLen.toFixed(2)}`,
+          style: { transform: 'rotate(135deg)', transformOrigin: '50px 50px' },
+        }),
+        el(motion.circle, {
+          cx: 50, cy: 50, r,
+          fill: 'none',
+          stroke: 'url(#cr-gradient)',
+          strokeWidth: 8,
+          strokeLinecap: 'round',
+          strokeDasharray: `${arcLen.toFixed(2)} ${gapLen.toFixed(2)}`,
+          initial: { strokeDashoffset: arcLen },
+          animate: { strokeDashoffset: fillOffset },
+          transition: { duration: 1.5, ease: [0.34, 1.56, 0.64, 1], delay: 0.3 },
+          style: { transform: 'rotate(135deg)', transformOrigin: '50px 50px', filter: 'drop-shadow(0 0 6px rgba(124,242,214,0.4))' },
+        })
+      ),
+      el('div', { className: 'comfort-ring-center' },
+        el('strong', { className: 'comfort-ring-score' }, safeScore),
+        el('div', { className: 'comfort-ring-label' }, safeScore >= 75 ? 'Prime' : safeScore >= 50 ? 'Good' : 'Low')
+      )
+    ),
+    note ? el('p', { className: 'story-copy', style: { textAlign: 'center', marginTop: '6px', fontSize: '0.82rem' } }, note) : null
+  );
+}
+
+/* ------------------------------------------------------------------
+   WindCompass — animated SVG compass needle pointing to wind direction
+   ------------------------------------------------------------------ */
+function WindCompass({ speed, direction }) {
+  const safeDir = Number(direction) || 0;
+  const CARDINALS = [
+    { label: 'N', x: 50, y: 14 },
+    { label: 'E', x: 86, y: 50 },
+    { label: 'S', x: 50, y: 86 },
+    { label: 'W', x: 14, y: 50 },
+  ];
+
+  return el('div', { className: 'wind-compass' },
+    el('svg', { viewBox: '0 0 100 100', className: 'wind-compass-svg', 'aria-hidden': 'true' },
+      el('circle', { cx: 50, cy: 50, r: 44, fill: 'none', stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }),
+      el('circle', { cx: 50, cy: 50, r: 36, fill: 'rgba(0,0,0,0.15)', stroke: 'rgba(255,255,255,0.05)', strokeWidth: 1 }),
+      Array.from({ length: 8 }).map(function renderTick(_, i) {
+        const angle = (i / 8) * 2 * Math.PI;
+        const x1 = (50 + Math.sin(angle) * 38).toFixed(2);
+        const y1 = (50 - Math.cos(angle) * 38).toFixed(2);
+        const x2 = (50 + Math.sin(angle) * 44).toFixed(2);
+        const y2 = (50 - Math.cos(angle) * 44).toFixed(2);
+        return el('line', { key: 'tick-' + i, x1, y1, x2, y2, stroke: 'rgba(255,255,255,0.18)', strokeWidth: i % 2 === 0 ? 1.5 : 0.8 });
+      }),
+      CARDINALS.map(function renderLabel(c) {
+        return el('text', {
+          key: c.label, x: c.x, y: c.y,
+          textAnchor: 'middle', dominantBaseline: 'middle',
+          fontSize: 8,
+          fill: c.label === 'N' ? '#7cf2d6' : 'rgba(255,255,255,0.55)',
+          fontWeight: c.label === 'N' ? '700' : '500',
+          fontFamily: 'Manrope, sans-serif',
+        }, c.label);
+      }),
+      el(motion.g, {
+        animate: { rotate: safeDir },
+        initial: { rotate: 0 },
+        transition: { type: 'spring', stiffness: 55, damping: 16 },
+        style: { transformOrigin: '50px 50px' },
+      },
+        el('line', { x1: 50, y1: 50, x2: 50, y2: 22, stroke: '#7cf2d6', strokeWidth: 2.5, strokeLinecap: 'round' }),
+        el('polygon', { points: '50,17 47,27 50,24 53,27', fill: '#7cf2d6' }),
+        el('line', { x1: 50, y1: 50, x2: 50, y2: 70, stroke: 'rgba(255,255,255,0.22)', strokeWidth: 2, strokeLinecap: 'round' }),
+        el('circle', { cx: 50, cy: 50, r: 3.5, fill: 'rgba(255,255,255,0.9)' })
+      )
+    ),
+    el('div', { className: 'wind-compass-speed' }, formatWind(speed)),
+    el('div', { className: 'wind-compass-dir-label' }, safeDir.toFixed(0) + '°')
+  );
+}
+
+/* ------------------------------------------------------------------
+   ShareWeatherButton — navigator.share() with clipboard fallback
+   ------------------------------------------------------------------ */
+function ShareWeatherButton({ location, temperature, condition }) {
+  const [toast, setToast] = useState('');
+  const toastTimerRef = useRef(null);
+
+  function showToast(msg) {
+    setToast(msg);
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(function clearToast() { setToast(''); }, 2200);
+  }
+
+  async function handleShare() {
+    const cond = condition.toLowerCase();
+    const emoji = cond.includes('storm') ? '⛈️'
+      : cond.includes('rain') || cond.includes('drizzle') || cond.includes('shower') ? '🌧️'
+      : cond.includes('snow') ? '❄️'
+      : cond.includes('mist') || cond.includes('fog') ? '🌫️'
+      : cond.includes('cloud') ? '⛅'
+      : cond.includes('night') ? '🌙'
+      : '☀️';
+    const text = `${emoji} ${location.name} is ${temperature} with ${condition.toLowerCase()} — via Atmospheric Intelligence`;
+    const shareData = { title: 'Atmospheric Intelligence', text, url: window.location.href };
+    if (navigator.share) {
+      try { await navigator.share(shareData); return; }
+      catch (err) { if (err.name === 'AbortError') return; }
+    }
+    try {
+      await navigator.clipboard.writeText(text + '\n' + window.location.href);
+      showToast('✓ Copied to clipboard!');
+    } catch (e) {
+      showToast('Could not copy — try manually.');
+    }
+  }
+
+  return el('div', { className: 'share-btn-wrap' },
+    el('button', { type: 'button', className: 'ghost-button share-btn-inner', onClick: handleShare }, '↗ Share weather'),
+    toast
+      ? el(motion.div, {
+          className: 'share-toast',
+          initial: { opacity: 0, y: 4 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.18 },
+        }, toast)
+      : null
+  );
+}
+
+/* ------------------------------------------------------------------
+   HourlyRail — iOS-style horizontal scroll pill timeline
+   ------------------------------------------------------------------ */
+const HourlyRail = memo(function HourlyRail({ items }) {
+  if (!items || !items.length) return null;
+  return el('div', { className: 'hourly-rail-wrap page-wrap' },
+    el('div', { className: 'hourly-rail' },
+      items.map(function renderPill(item, index) {
+        const theme = getWeatherTheme(item.weatherCode, item.isDay);
+        const now = index === 0;
+        const rainH = clamp(item.rainChance, 0, 100);
+        return el('div', {
+          key: item.time + '-rail-' + index,
+          className: 'hourly-rail-pill' + (now ? ' hrp-now' : ''),
+        },
+          el('div', { className: 'hrp-time' }, now ? 'Now' : formatHour(item.time)),
+          el('div', { className: 'hrp-icon' },
+            el(WeatherGlyph, { theme: theme.theme, isNight: !item.isDay, size: 16 })
+          ),
+          el('div', { className: 'hrp-temp' }, formatTemperature(item.temperature)),
+          el('div', { className: 'hrp-rain-bar' },
+            el('div', { className: 'hrp-rain-fill', style: { height: rainH + '%' } })
+          ),
+          el('div', { className: 'hrp-rain-pct' }, item.rainChance + '%')
+        );
+      })
+    )
+  );
+});
+
 function createSparkle(id, x, y) {
   return {
     id,
@@ -1428,20 +1686,10 @@ function AmbientBackground(props) {
         "--parallax-y": props.pointer ? `${props.pointer.y}px` : "0px",
       },
     },
-    el("div", { className: "ambient-sky-gradient" }),
+    el("div", { className: "ambient-sky-gradient", style: props.skyGradient ? { background: props.skyGradient, transition: 'background 2.5s ease' } : undefined }),
     el("div", { className: "ambient-grid" }),
     el("div", { className: "ambient-wash" }),
     el("div", { className: "ambient-noise" }),
-    el(
-      "div",
-      { className: "trend-graph-container", style: { height: "240px", width: "100%", position: "relative" } },
-      el(Suspense, { fallback: el("div", { className: "chart-empty" }, "Preparing graph...") },
-        el(WeatherCharts, {
-          data: props.items,
-          metric: props.metric
-        })
-      )
-    ),
     el(
       "div",
       { className: "aurora-ribbons" },
@@ -1661,7 +1909,12 @@ const HeroSection = memo(function HeroSection(props) {
         "div",
         { className: "hero-actions" },
         el("a", { className: "ghost-button", href: "#forecast-section" }, "Jump to forecast"),
-        el("a", { className: "ghost-button ghost-button-strong", href: "#details-section" }, "View details")
+        el("a", { className: "ghost-button ghost-button-strong", href: "#details-section" }, "View details"),
+        el(ShareWeatherButton, {
+          location: props.selectedLocation,
+          temperature: formatTemperature(props.weather.current.temperature_2m),
+          condition: weatherTheme.label,
+        })
       ),
       el(
         "div",
@@ -1871,16 +2124,17 @@ const HeroSection = memo(function HeroSection(props) {
         ),
         el(TiltWrapper, { className: "mini-panel-tilt-wrap" },
           el(ScrollReveal, { as: "article", className: "mini-panel mini-panel-story glass-card reveal-card" },
-            el("div", { className: "mini-label" }, "Outdoor score"),
-            el("strong", { className: "story-value" }, props.insights.comfortScore),
-            el("div", { className: "story-title" }, props.insights.comfortLabel),
-            el("p", { className: "story-copy" }, props.insights.comfortNote)
+            el(ComfortRing, {
+              score: props.insights.comfortScore,
+              label: props.insights.comfortLabel,
+              note: props.insights.comfortNote,
+            })
           )
         )
       )
     )
   );
-}
+});
 
 function QuickCityRail(props) {
   return el(LocationRail, {
@@ -2002,7 +2256,7 @@ function IntroOverlay(props) {
   );
 }
 
-function HourlySection(props) {
+const HourlySection = memo(function HourlySection(props) {
   const temperatures = props.items.map(function mapTemperature(item) {
     return Number(item.temperature);
   });
@@ -2028,7 +2282,7 @@ function HourlySection(props) {
     ),
     el(
       "div",
-      { className: "hourly-grid" },
+      { className: "hourly-grid stagger-fade-in" },
       props.items.map(function renderHour(item, index) {
         const theme = getWeatherTheme(item.weatherCode, item.isDay);
         const fill = clamp(
@@ -2076,7 +2330,7 @@ function HourlySection(props) {
       })
     )
   );
-}
+});
 
 const AlertSection = memo(function AlertSection(props) {
   if (!props.items.length) {
@@ -2101,7 +2355,7 @@ const AlertSection = memo(function AlertSection(props) {
     ),
     el(
       "div",
-      { className: "alert-grid" },
+      { className: "alert-grid stagger-fade-in" },
       props.items.map(function renderAlert(item) {
         return el(
           TiltWrapper,
@@ -2118,9 +2372,9 @@ const AlertSection = memo(function AlertSection(props) {
       })
     )
   );
-}
+});
 
-function InsightSection(props) {
+const InsightSection = memo(function InsightSection(props) {
   return el(
     "section",
     { className: "insight-grid" },
@@ -2152,7 +2406,7 @@ function InsightSection(props) {
       )
     )
   );
-}
+});
 
 const ForecastSection = memo(function ForecastSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "forecast-section" },
@@ -2175,6 +2429,7 @@ const ForecastSection = memo(function ForecastSection(props) {
       motion.div,
       {
         className: "forecast-bento-scroll",
+        style: { minHeight: "260px" },
         initial: "hidden",
         whileInView: "visible",
         viewport: { once: true, amount: 0.1 },
@@ -2206,7 +2461,7 @@ const ForecastSection = memo(function ForecastSection(props) {
             el(
               "div",
               { className: "card-day-info" },
-              el("div", { className: "card-day-label" }, formatRelativeDay(index)),
+              el("div", { className: "card-day-label" }, formatRelativeDay(index, item.date, props.currentCityTime)),
               el("div", { className: "card-day-name" }, formatWeekday(item.date)),
               el("div", { className: "card-date-meta" }, formatShortDate(item.date))
             ),
@@ -2266,9 +2521,9 @@ const ForecastSection = memo(function ForecastSection(props) {
       })
     )
   );
-}
+});
 
-function LifestyleSection(props) {
+const LifestyleSection = memo(function LifestyleSection(props) {
   return el(
     "section",
     { className: "insight-grid lifestyle-grid" },
@@ -2300,9 +2555,9 @@ function LifestyleSection(props) {
       )
     )
   );
-}
+});
 
-function BestTimeSection(props) {
+const BestTimeSection = memo(function BestTimeSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "best-time-section" },
     el(
       "div",
@@ -2339,9 +2594,9 @@ function BestTimeSection(props) {
       })
     )
   );
-}
+});
 
-function HealthSection(props) {
+const HealthSection = memo(function HealthSection(props) {
   return el(
     "section",
     { className: "insight-grid health-grid" },
@@ -2357,9 +2612,9 @@ function HealthSection(props) {
       );
     })
   );
-}
+});
 
-function MapSection(props) {
+const MapSection = memo(function MapSection(props) {
   return el(ScrollReveal, { as: "section", className: 'panel-section glass-card reveal-card', id: 'map-section' },
     el(TiltWrapper, { className: "map-tilt-wrap" },
       h(Suspense, { fallback: h('div', { style: { height: '400px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Geographic Radar...') },
@@ -2367,9 +2622,9 @@ function MapSection(props) {
       )
     )
   );
-}
+});
 
-function CommuteSection(props) {
+const CommuteSection = memo(function CommuteSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "commute-section" },
     el(
       "div",
@@ -2404,17 +2659,17 @@ function CommuteSection(props) {
       })
     )
   );
-}
+});
 
-function TrendSection(props) {
-  return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "trend-section" },
+const TrendSection = memo(function TrendSection(props) {
+  return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "trend-section", style: { minHeight: "350px" } },
     el(TiltWrapper, { className: "trend-tilt-wrap" },
       h(Suspense, { fallback: h('div', { style: { height: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#8b96a5' } }, 'Loading Interactive Charts...') },
         h(WeatherCharts, { hourly: props.hourly })
       )
     )
   );
-}
+});
 
 function ComparisonSearch({ onSelect }) {
   const [query, setQuery] = useState("");
@@ -2478,7 +2733,7 @@ function ComparisonSearch({ onSelect }) {
   );
 }
 
-function ComparisonSection(props) {
+const ComparisonSection = memo(function ComparisonSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "compare-section" },
     el(
       "div",
@@ -2499,12 +2754,12 @@ function ComparisonSection(props) {
     el(
       "div",
       { className: "compare-city-row" },
-      props.options.map(function renderOption(city) {
+      props.options.map(function renderOption(city, idx) {
         const active = sameLocation(city, props.compareLocation);
         return el(
           "button",
           {
-            key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}`,
+            key: `${city.name}-${city.country}-${roundCoordinate(city.latitude)}-${idx}`,
             type: "button",
             className: active ? "city-chip city-chip-active" : "city-chip",
             onClick: function handleClick() {
@@ -2557,7 +2812,7 @@ function ComparisonSection(props) {
         )
         : el("div", { className: "helper-copy" }, "Choose a second city to begin comparing.")
   );
-}
+});
 
 const DetailsSection = memo(function DetailsSection(props) {
   return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "details-section" },
@@ -2614,9 +2869,8 @@ const DetailsSection = memo(function DetailsSection(props) {
           "article",
           { className: "detail-card detail-card-relative glass-card" },
           el("div", { className: "detail-label" }, "Wind"),
-          el("strong", { className: "detail-value" }, formatWind(props.weather.current.wind_speed_10m)),
-          el("div", { className: "detail-support" }, "At 10 meters"),
-          el("p", { className: "detail-note z-10" }, "Wind can quickly change comfort, commuting ease, and rain exposure."),
+          el(WindCompass, { speed: props.weather.current.wind_speed_10m, direction: props.weather.current.wind_direction_10m }),
+          el("p", { className: "detail-note z-10", style: { marginTop: '8px' } }, "Wind can quickly change comfort, commuting ease, and rain exposure."),
           el(WindParticles, { speed: props.weather.current.wind_speed_10m, direction: props.weather.current.wind_direction_10m })
         )
       ),
@@ -2694,7 +2948,7 @@ const DetailsSection = memo(function DetailsSection(props) {
       )
     )
   );
-}
+});
 
 // Performance-optimized ScrollReveal: uses a single shared IntersectionObserver
 // instead of creating one per component (was ~30+ observers before)
@@ -3426,7 +3680,7 @@ function App() {
   const alerts = buildAlerts(weatherPayload, airSnapshot, hourlyItems, dailyItems);
   const commutePlan = buildCommutePlan(hourlyItems);
   const compareOptions = pushUniqueLocation(
-    QUICK_CITIES.concat(favoriteCities).concat(recentCities).filter(function filterCity(city) {
+    removeDuplicateLocations(QUICK_CITIES.concat(favoriteCities).concat(recentCities)).filter(function filterCity(city) {
       return !sameLocation(city, selectedLocation);
     }),
     compareLocation,
@@ -3467,6 +3721,7 @@ function App() {
     weatherPayload.daily.sunset[0],
     Boolean(weatherPayload.current.is_day)
   );
+  const skyGradient = computeSkyGradient(weatherPayload.current.time);
 
   return (
     <React.Fragment>
@@ -3482,6 +3737,7 @@ function App() {
           rainAmount: weatherPayload.current.precipitation,
           cinematicMode: true,
           skyMotion,
+          skyGradient,
           pointer: cursorState.visible
         ? { x: 0, y: 0 }
         : { x: 0, y: 0 },
@@ -3565,6 +3821,7 @@ function App() {
             recentCities,
             isFavorite,
           }),
+          el(HourlyRail, { items: hourlyItems }),
           el(AlertSection, { items: alerts }),
           el(BestTimeSection, { items: bestOutsideHours }),
           el(HealthSection, { items: healthAdvisories }),
@@ -3578,7 +3835,7 @@ function App() {
             onMetricChange: setChartMetric,
           }),
           el(HourlySection, { items: hourlyItems }),
-          el(ForecastSection, { items: dailyItems }),
+          el(ForecastSection, { items: dailyItems, currentCityTime: weatherPayload.current.time }),
           el(ComparisonSection, {
             options: compareOptions,
             compareLocation,

@@ -4130,3 +4130,83 @@ body.dark-mode-override .app-shell {
   background: #facc15;
   display: inline-block;
 }
+
+/* ============================================================
+   ANIMATED WEATHER GLYPHS
+   ============================================================ */
+
+/* Sunny — slow spin on the whole SVG (rays already spin via .sun-rays, this adds icon-level spin) */
+.weather-glyph-sunny {
+  animation: glyph-sun-spin 22s linear infinite;
+  transform-origin: center;
+}
+@keyframes glyph-sun-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+/* Rainy — gentle drip/bob downward */
+.weather-glyph-rainy {
+  animation: glyph-rain-bob 2s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-rain-bob {
+  from { transform: translateY(0px); }
+  to   { transform: translateY(4px); }
+}
+
+/* Storm — rapid shake + slight tilt */
+.weather-glyph-storm {
+  animation: glyph-storm-shake 0.85s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-storm-shake {
+  0%   { transform: translateY(0px) rotate(-1.5deg); }
+  100% { transform: translateY(3px) rotate(1.5deg); }
+}
+
+/* Night — gentle moon glow pulse */
+.weather-glyph-night {
+  animation: glyph-moon-glow 4.5s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-moon-glow {
+  from {
+    opacity: 0.82;
+    filter: drop-shadow(0 0 2px rgba(170, 200, 255, 0));
+  }
+  to {
+    opacity: 1;
+    filter: drop-shadow(0 0 10px rgba(170, 200, 255, 0.5));
+  }
+}
+
+/* Snow — slow float with gentle tilt */
+.weather-glyph-snow {
+  animation: glyph-snow-float 3.5s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-snow-float {
+  from { transform: translateY(0px) rotate(-4deg); }
+  to   { transform: translateY(-4px) rotate(4deg); }
+}
+
+/* Mist / Fog — horizontal sway with opacity drift */
+.weather-glyph-mist {
+  animation: glyph-mist-sway 5s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-mist-sway {
+  from { transform: translateX(-3px); opacity: 0.72; }
+  to   { transform: translateX(3px);  opacity: 1; }
+}
+
+/* Cloudy — slow lateral drift */
+.weather-glyph-cloudy {
+  animation: glyph-cloud-drift 6s ease-in-out infinite alternate;
+  transform-origin: center;
+}
+@keyframes glyph-cloud-drift {
+  from { transform: translateX(-2px); }
+  to   { transform: translateX(3px); }
+}
