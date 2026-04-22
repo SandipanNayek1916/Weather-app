@@ -4,7 +4,7 @@ import './SpotlightCard.css';
 import Lenis from '@studio-freight/lenis';
 // Auth and LoginModal removed — no sign-in feature needed
 import { LogOut, Star } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
 import NavFolder from './NavFolder.jsx';
 import AnimatedNumber from './AnimatedNumber.jsx';
 import SparkChart from './SparkChart.jsx';
@@ -2092,59 +2092,17 @@ const HeroSection = memo(function HeroSection(props) {
             el("div", { className: "mini-label" }, "Daylight arc"),
             (function renderDaylightArc() {
               const prog = clamp(daylightProgress, 0, 1);
-              // Use a 200×120 viewBox, arc radius 78, center at (100, 100)
-              // This gives more breathing room above the labels
-              const R = 78, cx = 100, cy = 100;
-              const startAngle = Math.PI;         // left = sunrise
-              const endAngle   = 0;               // right = sunset
-              const sunAngle   = Math.PI - prog * Math.PI;
-              const arcX1 = cx + R * Math.cos(startAngle);  // 22, 100
-              const arcY1 = cy + R * Math.sin(startAngle);
-              const arcX2 = cx + R * Math.cos(endAngle);    // 178, 100
-              const arcY2 = cy + R * Math.sin(endAngle);
-              const sunX  = cx + R * Math.cos(sunAngle);
-              const sunY  = cy + R * Math.sin(sunAngle);
-              const pX = sunX;
-              const pY = sunY;
               return el(
-                "svg",
-                { className: "daylight-svg", viewBox: "0 0 200 106", xmlns: "http://www.w3.org/2000/svg", style: { overflow: "visible" } },
-                el("defs", null,
-                  el("linearGradient", { id: "sunGrad2", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
-                    el("stop", { offset: "0%", stopColor: "#ffb347" }),
-                    el("stop", { offset: "50%", stopColor: "#ffe66d" }),
-                    el("stop", { offset: "100%", stopColor: "#ff6b6b" }),
-                  ),
-                  el("filter", { id: "sunGlow" },
-                    el("feGaussianBlur", { stdDeviation: "3", result: "blur" }),
-                    el("feMerge", null,
-                      el("feMergeNode", { in: "blur" }),
-                      el("feMergeNode", { in: "SourceGraphic" })
-                    )
-                  )
-                ),
-                // Horizon baseline
-                el("line", { x1: arcX1, y1: arcY1, x2: arcX2, y2: arcY2, stroke: "rgba(255,255,255,0.06)", strokeWidth: "1" }),
-                // Track arc (full semicircle)
-                el("path", {
-                  d: `M ${arcX1} ${arcY1} A ${R} ${R} 0 0 1 ${arcX2} ${arcY2}`,
-                  fill: "none",
-                  stroke: "rgba(255,255,255,0.1)",
-                  strokeWidth: "4",
-                  strokeLinecap: "round",
+                "div",
+                { className: "sun-track" },
+                el("div", {
+                  className: "sun-progress",
+                  style: { width: `${prog * 100}%` }
                 }),
-                // Progress arc
-                prog > 0.01 ? el("path", {
-                  d: `M ${arcX1} ${arcY1} A ${R} ${R} 0 0 1 ${pX} ${pY}`,
-                  fill: "none",
-                  stroke: "url(#sunGrad2)",
-                  strokeWidth: "4",
-                  strokeLinecap: "round",
-                }) : null,
-                // Glow halo behind knob
-                el("circle", { cx: sunX, cy: sunY, r: "16", fill: "rgba(255,180,71,0.18)", filter: "url(#sunGlow)" }),
-                // Sun knob
-                el("circle", { cx: sunX, cy: sunY, r: "7", fill: "#fff7ec", stroke: "#ffb347", strokeWidth: "2.5" }),
+                el("div", {
+                  className: "sun-knob",
+                  style: { left: `${prog * 100}%` }
+                })
               );
             })(),
             el(
@@ -3031,87 +2989,79 @@ function ScrollReveal(props) {
 }
 
 /* ------------------------------------------------------------------
-   SmoothCursor — premium magnetic cursor with lerp-trailing ring
-   Uses direct DOM manipulation + rAF for 60fps without React state
+   SmoothCursor — premium magnetic cursor with framer-motion springs
    ------------------------------------------------------------------ */
 function SmoothCursor() {
-  const dotRef   = useRef(null);
-  const ringRef  = useRef(null);
-  const rafRef   = useRef(null);
+  const [isHovering, setIsHovering] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
 
-  useEffect(function initCursor() {
-    const dot  = dotRef.current;
-    const ring = ringRef.current;
-    if (!dot || !ring) return;
+  const mouseX = useMotionValue(-100);
+  const mouseY = useMotionValue(-100);
 
-    let mx = -200, my = -200;       // raw mouse pos
-    let rx = -200, ry = -200;       // ring lerped pos
-    let visible = false;
+  // Smooth out the ring trailing
+  const springConfig = { damping: 25, stiffness: 300, mass: 0.5 };
+  const smoothX = useSpring(mouseX, springConfig);
+  const smoothY = useSpring(mouseY, springConfig);
 
-    function lerp(a, b, t) { return a + (b - a) * t; }
+  const dotX = useTransform(mouseX, x => x + 18 - 4);
+  const dotY = useTransform(mouseY, y => y + 18 - 4);
 
-    function loop() {
-      rx = lerp(rx, mx, 0.11);
-      ry = lerp(ry, my, 0.11);
-      dot.style.transform  = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
-      ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
-      rafRef.current = requestAnimationFrame(loop);
-    }
-
-    function onMove(e) {
-      mx = e.clientX;
-      my = e.clientY;
-      if (!visible) {
-        visible = true;
-        dot.style.opacity  = "1";
-        ring.style.opacity = "1";
-        // Snap ring to start position on first move
-        rx = mx; ry = my;
-      }
-    }
-
-    function onLeave() {
-      visible = false;
-      dot.style.opacity  = "0";
-      ring.style.opacity = "0";
-    }
-
-    // Expand ring on hoverable elements
-    function onPointerOver(e) {
-      const t = e.target;
-      if (t.closest("a, button, input, [role='button'], .glass-card")) {
-        ring.classList.add("cursor-ring--hover");
-        dot.classList.add("cursor-dot--hover");
-      }
-    }
-    function onPointerOut(e) {
-      const t = e.target;
-      if (t.closest("a, button, input, [role='button'], .glass-card")) {
-        ring.classList.remove("cursor-ring--hover");
-        dot.classList.remove("cursor-dot--hover");
-      }
-    }
-
-    rafRef.current = requestAnimationFrame(loop);
-    window.addEventListener("pointermove",  onMove,       { passive: true });
-    window.addEventListener("pointerleave", onLeave,      { passive: true });
-    window.addEventListener("pointerover",  onPointerOver,{ passive: true });
-    window.addEventListener("pointerout",   onPointerOut, { passive: true });
-
-    return function cleanup() {
-      cancelAnimationFrame(rafRef.current);
-      window.removeEventListener("pointermove",  onMove);
-      window.removeEventListener("pointerleave", onLeave);
-      window.removeEventListener("pointerover",  onPointerOver);
-      window.removeEventListener("pointerout",   onPointerOut);
+  useEffect(() => {
+    const handleMove = (e) => {
+      mouseX.set(e.clientX - 18); // center the 36px ring
+      mouseY.set(e.clientY - 18);
+      if (!isVisible) setIsVisible(true);
     };
-  }, []);
+
+    const handleLeave = () => setIsVisible(false);
+
+    const handleOver = (e) => {
+      if (e.target.closest("a, button, input, [role='button'], .glass-card, .search-result, .location-rail button, .hourly-rail-pill, .daylight-linear-track, .action-button")) {
+        setIsHovering(true);
+      }
+    };
+    const handleOut = (e) => {
+      if (e.target.closest("a, button, input, [role='button'], .glass-card, .search-result, .location-rail button, .hourly-rail-pill, .daylight-linear-track, .action-button")) {
+        setIsHovering(false);
+      }
+    };
+
+    window.addEventListener("pointermove", handleMove);
+    window.addEventListener("pointerleave", handleLeave);
+    window.addEventListener("pointerover", handleOver);
+    window.addEventListener("pointerout", handleOut);
+
+    return () => {
+      window.removeEventListener("pointermove", handleMove);
+      window.removeEventListener("pointerleave", handleLeave);
+      window.removeEventListener("pointerover", handleOver);
+      window.removeEventListener("pointerout", handleOut);
+    };
+  }, [mouseX, mouseY, isVisible]);
 
   return el(
     React.Fragment,
     null,
-    el("div", { ref: dotRef,  className: "cursor-dot",  "aria-hidden": "true" }),
-    el("div", { ref: ringRef, className: "cursor-ring", "aria-hidden": "true" })
+    // The dot snaps immediately
+    el(motion.div, {
+      className: `cursor-dot ${isHovering ? "cursor-dot--hover" : ""}`,
+      style: {
+        x: dotX,
+        y: dotY,
+        opacity: isVisible ? 1 : 0
+      },
+      "aria-hidden": "true"
+    }),
+    // The ring trails smoothly via useSpring
+    el(motion.div, {
+      className: `cursor-ring ${isHovering ? "cursor-ring--hover" : ""}`,
+      style: {
+        x: smoothX,
+        y: smoothY,
+        opacity: isVisible ? 1 : 0
+      },
+      "aria-hidden": "true"
+    })
   );
 }
 
