@@ -13,6 +13,7 @@ import SkeletonLoader from './SkeletonLoader.jsx';
 import WindParticles from './WindParticles.jsx';
 import HoloCard from './HoloCard.jsx';
 import TiltWrapper from './TiltWrapper.jsx';
+import WeatherTicker from './WeatherTicker.jsx';
 import './ui-enhancements.css';
 
 const WeatherCharts = lazy(() => import('./WeatherCharts.jsx'));
@@ -115,6 +116,14 @@ const WEATHER_CODE_MAP = {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '');
+  const r = parseInt(h.substring(0, 2), 16);
+  const g = parseInt(h.substring(2, 4), 16);
+  const b = parseInt(h.substring(4, 6), 16);
+  return isNaN(r) ? null : { r, g, b };
 }
 
 function roundCoordinate(value) {
@@ -1981,18 +1990,7 @@ const HeroSection = memo(function HeroSection(props) {
           })
           : el("p", { className: "helper-copy" }, "Your recent locations will appear here automatically.")
       ),
-      el(
-        "div",
-        { className: "ticker-strip" },
-        props.tickerItems.map(function renderItem(item) {
-          return el(
-            "div",
-            { key: item.label, className: "ticker-chip" },
-            el("span", null, item.label),
-            el("strong", null, item.value)
-          );
-        })
-      )
+      el(WeatherTicker, { items: props.tickerItems })
     ),
     el(
       "div",
@@ -2090,20 +2088,65 @@ const HeroSection = memo(function HeroSection(props) {
           })
         ),
         el(TiltWrapper, { className: "mini-panel-tilt-wrap" },
-          el(ScrollReveal, { as: "article", className: "mini-panel glass-card reveal-card" },
+          el(ScrollReveal, { as: "article", className: "mini-panel daylight-arc-panel glass-card reveal-card" },
             el("div", { className: "mini-label" }, "Daylight arc"),
-            el(
-              "div",
-              { className: "sun-track" },
-              el("div", {
-                className: "sun-progress",
-                style: { width: `${clamp(daylightProgress * 100, 0, 100)}%` },
-              }),
-              el("div", {
-                className: "sun-knob",
-                style: { left: `${clamp(daylightProgress * 100, 0, 100)}%` },
-              })
-            ),
+            (function renderDaylightArc() {
+              const prog = clamp(daylightProgress, 0, 1);
+              // Use a 200×120 viewBox, arc radius 78, center at (100, 100)
+              // This gives more breathing room above the labels
+              const R = 78, cx = 100, cy = 100;
+              const startAngle = Math.PI;         // left = sunrise
+              const endAngle   = 0;               // right = sunset
+              const sunAngle   = Math.PI - prog * Math.PI;
+              const arcX1 = cx + R * Math.cos(startAngle);  // 22, 100
+              const arcY1 = cy + R * Math.sin(startAngle);
+              const arcX2 = cx + R * Math.cos(endAngle);    // 178, 100
+              const arcY2 = cy + R * Math.sin(endAngle);
+              const sunX  = cx + R * Math.cos(sunAngle);
+              const sunY  = cy + R * Math.sin(sunAngle);
+              const pX = sunX;
+              const pY = sunY;
+              return el(
+                "svg",
+                { className: "daylight-svg", viewBox: "0 0 200 106", xmlns: "http://www.w3.org/2000/svg", style: { overflow: "visible" } },
+                el("defs", null,
+                  el("linearGradient", { id: "sunGrad2", x1: "0%", y1: "0%", x2: "100%", y2: "0%" },
+                    el("stop", { offset: "0%", stopColor: "#ffb347" }),
+                    el("stop", { offset: "50%", stopColor: "#ffe66d" }),
+                    el("stop", { offset: "100%", stopColor: "#ff6b6b" }),
+                  ),
+                  el("filter", { id: "sunGlow" },
+                    el("feGaussianBlur", { stdDeviation: "3", result: "blur" }),
+                    el("feMerge", null,
+                      el("feMergeNode", { in: "blur" }),
+                      el("feMergeNode", { in: "SourceGraphic" })
+                    )
+                  )
+                ),
+                // Horizon baseline
+                el("line", { x1: arcX1, y1: arcY1, x2: arcX2, y2: arcY2, stroke: "rgba(255,255,255,0.06)", strokeWidth: "1" }),
+                // Track arc (full semicircle)
+                el("path", {
+                  d: `M ${arcX1} ${arcY1} A ${R} ${R} 0 0 1 ${arcX2} ${arcY2}`,
+                  fill: "none",
+                  stroke: "rgba(255,255,255,0.1)",
+                  strokeWidth: "4",
+                  strokeLinecap: "round",
+                }),
+                // Progress arc
+                prog > 0.01 ? el("path", {
+                  d: `M ${arcX1} ${arcY1} A ${R} ${R} 0 0 1 ${pX} ${pY}`,
+                  fill: "none",
+                  stroke: "url(#sunGrad2)",
+                  strokeWidth: "4",
+                  strokeLinecap: "round",
+                }) : null,
+                // Glow halo behind knob
+                el("circle", { cx: sunX, cy: sunY, r: "16", fill: "rgba(255,180,71,0.18)", filter: "url(#sunGlow)" }),
+                // Sun knob
+                el("circle", { cx: sunX, cy: sunY, r: "7", fill: "#fff7ec", stroke: "#ffb347", strokeWidth: "2.5" }),
+              );
+            })(),
             el(
               "div",
               { className: "sun-meta" },
@@ -2409,7 +2452,8 @@ const InsightSection = memo(function InsightSection(props) {
 });
 
 const ForecastSection = memo(function ForecastSection(props) {
-  return el(ScrollReveal, { as: "section", className: "panel-section glass-card reveal-card", id: "forecast-section" },
+  const items = Array.isArray(props.items) ? props.items : [];
+  return el("section", { className: "panel-section glass-card", id: "forecast-section" },
     el(
       "div",
       { className: "section-heading" },
@@ -2425,103 +2469,88 @@ const ForecastSection = memo(function ForecastSection(props) {
         )
       )
     ),
-    el(
-      motion.div,
-      {
-        className: "forecast-bento-scroll",
-        style: { minHeight: "260px" },
-        initial: "hidden",
-        whileInView: "visible",
-        viewport: { once: true, amount: 0.1 },
-        variants: {
-          visible: {
-            transition: {
-              staggerChildren: 0.1,
-            },
-          },
-        },
-      },
-      props.items.map(function renderDay(item, index) {
-        const theme = getWeatherTheme(item.weatherCode, true);
-        const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 15, 100);
+    items.length === 0
+      ? el("div", { className: "forecast-empty" }, "No forecast data available. Try searching a city.")
+      : el(
+          "div",
+          { className: "forecast-bento-scroll" },
+          items.map(function renderDay(item, index) {
+            const theme = getWeatherTheme(item.weatherCode, true);
+            const temperatureSpan = clamp(((item.max - item.min) / 20) * 100, 15, 100);
 
-        return el(
-          TiltWrapper,
-          { key: `${item.date}-${item.weatherCode}`, className: "forecast-card-tilt-wrap" },
-          el(
-            motion.article,
-            {
-              className: `forecast-card theme-${theme.theme}`,
-              variants: {
-                hidden: { opacity: 0, y: 30, scale: 0.95 },
-                visible: { opacity: 1, y: 0, scale: 1 },
-              },
-              transition: { type: "spring", stiffness: 260, damping: 20 },
-            },
-            el(
-              "div",
-              { className: "card-day-info" },
-              el("div", { className: "card-day-label" }, formatRelativeDay(index, item.date, props.currentCityTime)),
-              el("div", { className: "card-day-name" }, formatWeekday(item.date)),
-              el("div", { className: "card-date-meta" }, formatShortDate(item.date))
-            ),
-            el(
-              "div",
-              { className: "card-visuals" },
+            return el(
+              TiltWrapper,
+              { key: `${item.date}-${index}`, className: "forecast-card-tilt-wrap" },
               el(
-                "div",
-                { className: "card-glyph-box" },
-                el(WeatherGlyph, {
-                  theme: theme.theme,
-                  isNight: false,
-                  className: "weather-glyph",
-                  size: 28,
-                })
-              ),
-              el("div", { className: "card-short-label" }, theme.shortLabel)
-            ),
-            el(
-              "div",
-              { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" } },
-              el(
-                "div",
-                { className: "card-temps-box" },
-                el("span", { className: "card-max-temp" }, formatTemperature(item.max)),
-                el("span", { className: "card-min-temp" }, formatTemperature(item.min))
-              ),
-              el(
-                "div",
-                { className: "vertical-temp-bar" },
-                el(motion.div, {
-                  className: "vertical-temp-fill",
-                  initial: { height: 0 },
-                  whileInView: { height: `${temperatureSpan}%` },
-                  transition: { delay: 0.2 + index * 0.1, duration: 1.5, ease: "easeOut" },
-                })
+                "article",
+                {
+                  className: `forecast-card theme-${theme.theme} forecast-card-reveal`,
+                  style: { "--stagger-delay": `${index * 80}ms` },
+                },
+                el(
+                  "div",
+                  { className: "card-day-info" },
+                  el("div", { className: "card-day-label" }, formatRelativeDay(index, item.date, props.currentCityTime)),
+                  el("div", { className: "card-day-name" }, formatWeekday(item.date)),
+                  el("div", { className: "card-date-meta" }, formatShortDate(item.date))
+                ),
+                el(
+                  "div",
+                  { className: "card-visuals" },
+                  el(
+                    "div",
+                    { className: "card-glyph-box" },
+                    el(WeatherGlyph, {
+                      theme: theme.theme,
+                      isNight: false,
+                      className: "weather-glyph",
+                      size: 28,
+                    })
+                  ),
+                  el("div", { className: "card-short-label" }, theme.shortLabel)
+                ),
+                el(
+                  "div",
+                  { style: { flex: 1, display: "flex", alignItems: "center", justifyContent: "space-between" } },
+                  el(
+                    "div",
+                    { className: "card-temps-box" },
+                    el("span", { className: "card-max-temp" }, formatTemperature(item.max)),
+                    el("span", { className: "card-min-temp" }, formatTemperature(item.min))
+                  ),
+                  el(
+                    "div",
+                    { className: "vertical-temp-bar" },
+                    el("div", {
+                      className: "vertical-temp-fill",
+                      style: { height: `${temperatureSpan}%` },
+                    })
+                  )
+                ),
+                el(
+                  "div",
+                  { className: "card-footer-meta" },
+                  el(
+                    "div",
+                    { className: "meta-item" },
+                    el("span", null, "Rain"),
+                    el("span", { className: "meta-val" }, `${item.rainChance}%`)
+                  ),
+                  el(
+                    "div",
+                    { className: "meta-item", style: { textAlign: "right" } },
+                    el("span", null, "UV Index"),
+                    el("span", { className: "meta-val" }, toRounded(item.uv))
+                  )
+                )
               )
-            ),
-            el(
-              "div",
-              { className: "card-footer-meta" },
-              el(
-                "div",
-                { className: "meta-item" },
-                el("span", null, "Rain"),
-                el("span", { className: "meta-val" }, `${item.rainChance}%`)
-              ),
-              el(
-                "div",
-                { className: "meta-item", style: { textAlign: "right" } },
-                el("span", null, "UV Index"),
-                el("span", { className: "meta-val" }, toRounded(item.uv))
-              )
-            )
-          )
-        );
-      })
-    )
+            );
+          })
+        )
   );
 });
+
+
 
 const LifestyleSection = memo(function LifestyleSection(props) {
   return el(
@@ -3001,6 +3030,91 @@ function ScrollReveal(props) {
   return el(props.as || "div", elementProps, props.children);
 }
 
+/* ------------------------------------------------------------------
+   SmoothCursor — premium magnetic cursor with lerp-trailing ring
+   Uses direct DOM manipulation + rAF for 60fps without React state
+   ------------------------------------------------------------------ */
+function SmoothCursor() {
+  const dotRef   = useRef(null);
+  const ringRef  = useRef(null);
+  const rafRef   = useRef(null);
+
+  useEffect(function initCursor() {
+    const dot  = dotRef.current;
+    const ring = ringRef.current;
+    if (!dot || !ring) return;
+
+    let mx = -200, my = -200;       // raw mouse pos
+    let rx = -200, ry = -200;       // ring lerped pos
+    let visible = false;
+
+    function lerp(a, b, t) { return a + (b - a) * t; }
+
+    function loop() {
+      rx = lerp(rx, mx, 0.11);
+      ry = lerp(ry, my, 0.11);
+      dot.style.transform  = `translate(${mx}px, ${my}px) translate(-50%, -50%)`;
+      ring.style.transform = `translate(${rx}px, ${ry}px) translate(-50%, -50%)`;
+      rafRef.current = requestAnimationFrame(loop);
+    }
+
+    function onMove(e) {
+      mx = e.clientX;
+      my = e.clientY;
+      if (!visible) {
+        visible = true;
+        dot.style.opacity  = "1";
+        ring.style.opacity = "1";
+        // Snap ring to start position on first move
+        rx = mx; ry = my;
+      }
+    }
+
+    function onLeave() {
+      visible = false;
+      dot.style.opacity  = "0";
+      ring.style.opacity = "0";
+    }
+
+    // Expand ring on hoverable elements
+    function onPointerOver(e) {
+      const t = e.target;
+      if (t.closest("a, button, input, [role='button'], .glass-card")) {
+        ring.classList.add("cursor-ring--hover");
+        dot.classList.add("cursor-dot--hover");
+      }
+    }
+    function onPointerOut(e) {
+      const t = e.target;
+      if (t.closest("a, button, input, [role='button'], .glass-card")) {
+        ring.classList.remove("cursor-ring--hover");
+        dot.classList.remove("cursor-dot--hover");
+      }
+    }
+
+    rafRef.current = requestAnimationFrame(loop);
+    window.addEventListener("pointermove",  onMove,       { passive: true });
+    window.addEventListener("pointerleave", onLeave,      { passive: true });
+    window.addEventListener("pointerover",  onPointerOver,{ passive: true });
+    window.addEventListener("pointerout",   onPointerOut, { passive: true });
+
+    return function cleanup() {
+      cancelAnimationFrame(rafRef.current);
+      window.removeEventListener("pointermove",  onMove);
+      window.removeEventListener("pointerleave", onLeave);
+      window.removeEventListener("pointerover",  onPointerOver);
+      window.removeEventListener("pointerout",   onPointerOut);
+    };
+  }, []);
+
+  return el(
+    React.Fragment,
+    null,
+    el("div", { ref: dotRef,  className: "cursor-dot",  "aria-hidden": "true" }),
+    el("div", { ref: ringRef, className: "cursor-ring", "aria-hidden": "true" })
+  );
+}
+
 function App() {
   // Auth removed — no sign-in feature
 
@@ -3008,12 +3122,12 @@ function App() {
   useEffect(function initLenis() {
     if (typeof Lenis !== "undefined") {
       const lenis = new Lenis({
-        duration: 1.2,
+        duration: 1.6,
         easing: function (t) { return Math.min(1, 1.001 - Math.pow(2, -10 * t)); },
         direction: 'vertical',
         gestureDirection: 'vertical',
         smooth: true,
-        mouseMultiplier: 1,
+        mouseMultiplier: 0.9,
         smoothTouch: false,
         touchMultiplier: 2,
       });
@@ -3242,13 +3356,17 @@ function App() {
       document.documentElement.style.setProperty('--parallax-x', (((x / window.innerWidth) - 0.5) * 28) + 'px');
       document.documentElement.style.setProperty('--parallax-y', (((y / window.innerHeight) - 0.5) * 20) + 'px');
 
-      // Spotlight effect for glass-card elements
+      // Spotlight effect for glass-card elements (theme-aware glow)
       const card = event.target.closest('.glass-card');
       if (card) {
         const rect = card.getBoundingClientRect();
         card.style.setProperty('--spot-x', (x - rect.left) + 'px');
         card.style.setProperty('--spot-y', (y - rect.top) + 'px');
-        card.style.setProperty('--spot-color', 'rgba(82, 182, 255, 0.15)');
+        // Use current accent color for glow so it matches weather theme
+        const accentHex = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+        const rgb = hexToRgb(accentHex);
+        const spotColor = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.18)` : 'rgba(82, 182, 255, 0.18)';
+        card.style.setProperty('--spot-color', spotColor);
       }
 
       setCursorState(state => {
@@ -3668,10 +3786,14 @@ function App() {
   const locationLabel = formatLocationLabel(selectedLocation);
   const coordinateLabel = createCoordinateLabel(selectedLocation);
   const tickerItems = [
-    { label: "Feels like", value: formatTemperature(weatherPayload.current.apparent_temperature) },
-    { label: "Humidity", value: formatPercent(weatherPayload.current.relative_humidity_2m) },
-    { label: "Wind", value: formatWind(weatherPayload.current.wind_speed_10m) },
-    { label: "Pressure", value: formatPressure(weatherPayload.current.surface_pressure) },
+    { icon: '🌡', label: 'Feels like', value: formatTemperature(weatherPayload.current.apparent_temperature) },
+    { icon: '💧', label: 'Humidity', value: formatPercent(weatherPayload.current.relative_humidity_2m) },
+    { icon: '💨', label: 'Wind', value: formatWind(weatherPayload.current.wind_speed_10m) },
+    { icon: '📊', label: 'Pressure', value: formatPressure(weatherPayload.current.surface_pressure) },
+    { icon: '☁️', label: 'Condition', value: currentTheme.label },
+    { icon: '☀️', label: 'UV Index', value: formatAirValue(airSnapshot.uv_index, '') + ' ' + getUvLabel(airSnapshot.uv_index) },
+    { icon: '🌍', label: 'AQI', value: airSnapshot.us_aqi !== null ? `${toRounded(airSnapshot.us_aqi)} — ${getAqiLabel(airSnapshot.us_aqi)}` : 'Unavailable' },
+    { icon: '📍', label: selectedLocation.name, value: createCoordinateLabel(selectedLocation) },
   ];
   const insights = buildInsights(weatherPayload, airSnapshot, hourlyItems);
   const lifestyle = buildLifestyle(weatherPayload, airSnapshot, hourlyItems);
@@ -3743,14 +3865,7 @@ function App() {
         : { x: 0, y: 0 },
         }),
         showIntro ? el(IntroOverlay, introProps) : null,
-        !showIntro
-          ? el(CursorEffects, {
-            x: cursorState.x,
-            y: cursorState.y,
-            visible: cursorState.visible,
-            sparkles,
-          })
-          : null,
+        el(SmoothCursor, null),
         el(
           "header",
           { className: "topbar page-wrap" },

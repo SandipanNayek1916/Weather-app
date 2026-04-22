@@ -28,33 +28,72 @@
   }
 }
 
+/* ============================================================
+   TODAY HIGHLIGHTS — details-grid
+   4 columns, equal-height rows, balanced card layout
+   ============================================================ */
 .details-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  grid-auto-rows: minmax(160px, auto);
-  gap: 16px;
-}
-@media (max-width: 768px) {
-  .details-grid {
-    grid-template-columns: 1fr;
-  }
-  .detail-card-map, .detail-card-highlight {
-    grid-column: span 1 !important;
-  }
+  grid-auto-rows: minmax(180px, auto);
+  gap: 14px;
+  align-items: stretch;
 }
 
-/* Make map bigger */
-.detail-card-map {
-  grid-column: span 4;
+/* Air quality: spans 2 rows to be the hero card */
+.detail-card-highlight {
+  grid-row: span 1;
+  grid-column: span 1;
 }
-@media (min-width: 768px) {
+
+/* Wind card: regular 1×1 */
+.detail-card-relative {
+  grid-column: span 1;
+}
+
+/* Location: wider on bigger screens */
+.detail-card-map {
+  grid-column: span 2;
+}
+
+/* --- All detail cards are flex-column for consistent inner spacing --- */
+.detail-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  gap: 2px;
+  height: 100%;
+  box-sizing: border-box;
+}
+.detail-card .detail-label {
+  margin-bottom: 2px;
+}
+.detail-card .detail-note {
+  margin-top: auto;   /* pushes note to bottom of card */
+  padding-top: 8px;
+}
+
+@media (max-width: 1024px) {
+  .details-grid {
+    grid-template-columns: repeat(2, 1fr);
+    grid-auto-rows: minmax(160px, auto);
+  }
   .detail-card-map {
     grid-column: span 2;
   }
+}
+@media (max-width: 600px) {
+  .details-grid {
+    grid-template-columns: 1fr;
+    grid-auto-rows: auto;
+  }
+  .detail-card-map,
   .detail-card-highlight {
-    grid-column: span 2;
+    grid-column: span 1 !important;
+    grid-row: span 1 !important;
   }
 }
+
 
 /* 2. Micro-interactions & 3D Tilt preparations */
 .glass-card {
@@ -492,6 +531,25 @@
 .compare-search-result-btn:last-child { border-bottom: none; }
 
 /* Weekly Outlook - Premium Horizontal Bento Redesign */
+
+/* CSS-only stagger entrance — no framer-motion deadlock */
+@keyframes forecast-card-in {
+  from { opacity: 0; transform: translateY(24px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+.forecast-card-reveal {
+  animation: forecast-card-in 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--stagger-delay, 0ms);
+}
+
+/* Empty state */
+.forecast-empty {
+  padding: 40px;
+  text-align: center;
+  color: rgba(255,255,255,0.4);
+  font-size: 0.95rem;
+}
+
 .forecast-bento-scroll {
   display: flex;
   overflow-x: auto;
@@ -504,6 +562,7 @@
 }
 .forecast-bento-scroll::-webkit-scrollbar {
   display: none; /* Hide scrollbar Chrome/Safari */
+
 }
 
 /* Individual Bento Card */
@@ -806,4 +865,500 @@
 .scroll-reveal.is-visible .stagger-fade-in > *:nth-child(8)  { opacity: 1; transform: none; transition-delay: 455ms; }
 .scroll-reveal.is-visible .stagger-fade-in > *:nth-child(9)  { opacity: 1; transform: none; transition-delay: 520ms; }
 .scroll-reveal.is-visible .stagger-fade-in > *:nth-child(n+10) { opacity: 1; transform: none; transition-delay: 585ms; }
+
+/* ============================================================
+   ROIHeads-INSPIRED PREMIUM DESIGN LAYER
+   All additions are CSS-transform/opacity only (no layout reflow)
+   ============================================================ */
+
+/* ---------- 1. GIANT KINETIC TEMPERATURE NUMBER ---------- */
+.temperature-main {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: clamp(4rem, 10vw, 8rem);
+  font-weight: 800;
+  letter-spacing: -4px;
+  line-height: 0.9;
+  background: linear-gradient(
+    145deg,
+    #ffffff 0%,
+    rgba(200, 225, 255, 0.92) 30%,
+    var(--accent, #52b6ff) 65%,
+    var(--accent-2, #7cf2d6) 100%
+  );
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 0 28px rgba(82, 182, 255, 0.28));
+  transition: filter 0.6s ease;
+}
+.temperature-main:hover {
+  filter: drop-shadow(0 0 42px rgba(82, 182, 255, 0.5));
+}
+
+/* ---------- 2. SECTION HEADINGS — eyebrow + bold h2 side-by-side ---------- */
+
+/* The inner div becomes a flex row so pill + heading sit inline */
+.section-heading > div {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px;
+  row-gap: 10px;
+}
+
+/* Description copy drops to its own full-width line */
+.section-heading > div > p,
+.section-heading > div > .section-copy {
+  flex-basis: 100%;
+  width: 100%;
+  margin-top: 6px;
+}
+
+/* h2 sits inline next to the eyebrow */
+.section-heading h2,
+.panel-section > .section-heading > div > h2 {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: clamp(1.6rem, 3.5vw, 2.4rem);
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  line-height: 1.05;
+  color: var(--text, #f6fbff);
+  position: relative;
+  display: inline-block;
+  margin: 0;
+}
+
+/* Animated sweep underline */
+.section-heading h2::after,
+.panel-section > .section-heading > div > h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: -5px;
+  width: 100%;
+  height: 2.5px;
+  background: linear-gradient(90deg, var(--accent, #52b6ff) 0%, var(--accent-2, #7cf2d6) 60%, transparent 100%);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transform-origin: left center;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
+}
+.scroll-reveal.is-visible .section-heading h2::after,
+.scroll-reveal.is-visible .panel-section > .section-heading > div > h2::after,
+.section-heading h2::after {
+  /* Always visible — underline starts fully open when not in reveal context */
+}
+/* Only animate when inside a scroll-reveal */
+.scroll-reveal .section-heading h2::after {
+  transform: scaleX(0);
+}
+.scroll-reveal.is-visible .section-heading h2::after {
+  transform: scaleX(1);
+}
+
+/* ---------- 3. HERO H1 — editorial display type ---------- */
+.hero-copy-panel h1 {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: clamp(2.2rem, 5vw, 3.8rem);
+  font-weight: 800;
+  letter-spacing: -2.5px;
+  line-height: 1.0;
+  color: var(--text, #f6fbff);
+  margin-bottom: 12px;
+}
+
+/* ---------- 4. EYEBROW pill style ---------- */
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2.5px;
+  color: var(--accent, #52b6ff);
+  background: rgba(82, 182, 255, 0.08);
+  border: 1px solid rgba(82, 182, 255, 0.2);
+  padding: 4px 12px;
+  border-radius: 999px;
+  margin-bottom: 0;       /* reset — spacing handled by flex gap */
+  flex-shrink: 0;
+  width: fit-content;
+  white-space: nowrap;
+}
+/* When eyebrow is NOT inside a section-heading (e.g. hero panel), keep bottom margin */
+.hero-copy-panel .eyebrow {
+  margin-bottom: 12px;
+}
+.eyebrow::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent, #52b6ff);
+  box-shadow: 0 0 8px var(--accent, #52b6ff);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+/* ---------- 5. CARD GLOW HALO — severity-aware ambient glow ---------- */
+.detail-card {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    border-color 0.4s ease;
+}
+.detail-card::before {
+  content: '';
+  position: absolute;
+  inset: -30px;
+  border-radius: inherit;
+  background: radial-gradient(ellipse at 50% 50%, rgba(82, 182, 255, 0.12), transparent 70%);
+  opacity: 0;
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+  z-index: 0;
+}
+.detail-card:hover::before {
+  opacity: 1;
+}
+.detail-card:hover {
+  transform: translateY(-6px) scale(1.02);
+  box-shadow:
+    0 24px 60px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(82, 182, 255, 0.2),
+    0 0 40px rgba(82, 182, 255, 0.12);
+  border-color: rgba(82, 182, 255, 0.25) !important;
+  z-index: 2;
+}
+
+/* Detail value — solid white bold */
+.detail-value {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 800;
+  letter-spacing: -2px;
+  line-height: 1;
+  color: var(--text, #f6fbff);
+}
+
+/* ---------- 6. SCROLL REVEAL — cinematic slide-up with blur ---------- */
+.scroll-reveal .reveal-card,
+.reveal-card {
+  opacity: 0;
+  transform: translateY(36px) scale(0.97);
+  filter: blur(4px);
+  transition:
+    opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scroll-reveal.is-visible .reveal-card,
+.scroll-reveal.is-visible.reveal-card {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+/* Overide: when the reveal IS the scroll-reveal element itself */
+.scroll-reveal.reveal-card {
+  opacity: 0;
+  transform: translateY(36px) scale(0.97);
+  filter: blur(4px);
+  transition:
+    opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    transform 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.scroll-reveal.reveal-card.is-visible {
+  opacity: 1;
+  transform: none;
+  filter: blur(0);
+}
+
+/* ---------- 7. WEATHER TICKER — ROIHeads marquee ---------- */
+.weather-ticker-wrap {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 18px;
+}
+.weather-ticker-wrap::before,
+.weather-ticker-wrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 80px;
+  z-index: 2;
+  pointer-events: none;
+}
+.weather-ticker-wrap::before {
+  left: 0;
+  background: linear-gradient(90deg, rgba(7, 17, 31, 0.95), transparent);
+}
+.weather-ticker-wrap::after {
+  right: 0;
+  background: linear-gradient(270deg, rgba(7, 17, 31, 0.95), transparent);
+}
+.weather-ticker-inner {
+  display: flex;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.weather-ticker-track {
+  display: flex;
+  gap: 0;
+  animation: ticker-scroll 28s linear infinite;
+  will-change: transform;
+}
+.weather-ticker-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 64px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  color: rgba(200, 220, 240, 0.6);
+  white-space: nowrap;
+  font-family: 'Space Grotesk', sans-serif;
+}
+@keyframes ticker-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-50%); }
+}
+.weather-ticker-wrap:hover .weather-ticker-track {
+  animation-play-state: paused;
+}
+
+/* ---------- 8. ACTION BUTTONS — shimmer pill style ---------- */
+.action-button {
+  position: relative;
+  overflow: hidden;
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease;
+}
+.action-button::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.12) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.55s ease;
+}
+.action-button:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 8px 24px rgba(82, 182, 255, 0.25);
+}
+.action-button:hover::after {
+  transform: translateX(100%);
+}
+.action-button:active {
+  transform: scale(0.98);
+}
+
+/* ---------- 9. CITY CHIPS — magnetic-ready with glow ---------- */
+.city-chip {
+  position: relative;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    background 0.3s ease;
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-weight: 600;
+}
+.city-chip:hover {
+  transform: translateY(-3px) scale(1.04);
+  box-shadow: 0 6px 20px rgba(82, 182, 255, 0.2);
+  border-color: rgba(82, 182, 255, 0.4);
+  background: rgba(82, 182, 255, 0.12);
+}
+.city-chip-active {
+  box-shadow: 0 0 16px rgba(82, 182, 255, 0.3);
+}
+
+/* ---------- 10. INSIGHT / HOLO CARDS — solid white ---------- */
+.insight-card h3 {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
+  color: var(--text, #f6fbff);
+  margin: 6px 0;
+}
+
+/* ---------- 11. HOUR CARDS — subtle glow lift ---------- */
+.hour-card {
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease,
+    background 0.3s ease;
+}
+.hour-card:hover {
+  transform: translateY(-6px) scale(1.04);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(82, 182, 255, 0.15);
+  background: rgba(82, 182, 255, 0.08) !important;
+}
+
+/* ---------- 12. CURRENT CARD TEMPERATURE HERO ---------- */
+.current-card .temperature-row {
+  align-items: flex-start;
+  gap: 12px;
+  margin: 12px 0;
+}
+.current-card .temperature-main {
+  line-height: 0.88;
+  /* inherit giant size from parent class */
+}
+
+/* ---------- 13. MINI-LABEL — refined uppercase badge ---------- */
+.mini-label {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: rgba(200, 220, 255, 0.5);
+}
+
+/* ---------- 14. ALERT CARDS — editorial tone cards ---------- */
+.alert-card {
+  transition:
+    transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.35s ease;
+}
+.alert-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* ---------- 15. NOISE GRAIN OVERLAY ---------- */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 9998;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='1'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+}
+
+/* ---------- 16. FORECAST CARD ENHANCED ---------- */
+.forecast-card {
+  transition:
+    transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1),
+    box-shadow 0.4s ease,
+    border-color 0.4s ease,
+    background 0.4s ease !important;
+}
+
+/* ---------- 17. TOPBAR brand --- solid white ---------- */
+.brand strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text, #f6fbff);
+}
+
+/* ---------- 18. GHOST BUTTON — shimmer on hover ---------- */
+.ghost-button {
+  position: relative;
+  overflow: hidden;
+  font-family: 'Space Grotesk', 'Manrope', sans-serif;
+  font-weight: 600;
+  transition:
+    transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
+}
+.ghost-button::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 30%, rgba(255,255,255,0.07) 50%, transparent 70%);
+  transform: translateX(-100%);
+  transition: transform 0.5s ease;
+}
+.ghost-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(82, 182, 255, 0.15);
+}
+.ghost-button:hover::before {
+  transform: translateX(100%);
+}
+
+/* ---------- 19. GAUGE CARDS — editorial feel ---------- */
+.gauge-card {
+  transition:
+    transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 0.4s ease;
+}
+.gauge-card:hover {
+  transform: translateY(-6px) scale(1.03);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.3),
+    0 0 30px rgba(82, 182, 255, 0.12);
+}
+
+/* Gauge center values — solid white */
+.gauge-center strong {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 1.6rem;
+  font-weight: 800;
+  letter-spacing: -1.5px;
+  color: var(--text, #f6fbff);
+}
+
+/* ---------- 20. FOOTER — subtle gradient ---------- */
+.footer-panel {
+  background: linear-gradient(135deg, rgba(8, 20, 35, 0.6), rgba(7, 17, 31, 0.8)) !important;
+}
+
+/* ---------- 21. INTRO OVERLAY — polish ---------- */
+.intro-temp {
+  font-family: 'Space Grotesk', 'Manrope', sans-serif !important;
+  font-weight: 800 !important;
+  letter-spacing: -3px !important;
+}
+
+/* ---------- 22. RESPONSIVE TWEAKS ---------- */
+@media (max-width: 768px) {
+  .temperature-main {
+    font-size: clamp(3rem, 14vw, 5rem);
+    letter-spacing: -2px;
+  }
+  .hero-copy-panel h1 {
+    font-size: clamp(1.8rem, 7vw, 2.6rem);
+  }
+}
+
+/* ---------- 23. PREFERS REDUCED MOTION ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .weather-ticker-track { animation: none; }
+  .reveal-card,
+  .scroll-reveal.reveal-card { 
+    opacity: 1; transform: none; filter: none;
+    transition: none;
+  }
+  .stagger-fade-in > * { opacity: 1; transform: none; }
+  .eyebrow::before { animation: none; }
+}
 
