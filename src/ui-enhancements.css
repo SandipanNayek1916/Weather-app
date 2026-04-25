@@ -125,6 +125,7 @@
     transparent 40%
   );
   -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
@@ -366,6 +367,7 @@
   line-height: 1;
   background: linear-gradient(180deg, #ffffff 0%, #b8d4ff 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   color: transparent;
   letter-spacing: -1px;
 }
@@ -694,6 +696,7 @@
   line-height: 1;
   background: linear-gradient(180deg, #ffffff 0%, #b8d4ff 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   color: transparent;
 }
@@ -944,11 +947,7 @@
   transform-origin: left center;
   transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.1s;
 }
-.scroll-reveal.is-visible .section-heading h2::after,
-.scroll-reveal.is-visible .panel-section > .section-heading > div > h2::after,
-.section-heading h2::after {
-  /* Always visible — underline starts fully open when not in reveal context */
-}
+/* Always visible — underline starts fully open when not in reveal context */
 /* Only animate when inside a scroll-reveal */
 .scroll-reveal .section-heading h2::after {
   transform: scaleX(0);

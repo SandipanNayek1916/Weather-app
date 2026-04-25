@@ -1570,21 +1570,23 @@ function WeatherGlyph(props) {
         "aria-hidden": "true",
       },
       el("circle", { cx: "24", cy: "24", r: "7.5" }),
-      Array.from({ length: 8 }).map(function renderRay(_, index) {
-        const angle = (Math.PI * 2 * index) / 8;
-        const x1 = 24 + Math.cos(angle) * 11;
-        const y1 = 24 + Math.sin(angle) * 11;
-        const x2 = 24 + Math.cos(angle) * 17;
-        const y2 = 24 + Math.sin(angle) * 17;
+      el("g", { className: "sun-rays-group" },
+        Array.from({ length: 8 }).map(function renderRay(_, index) {
+          const angle = (Math.PI * 2 * index) / 8;
+          const x1 = 24 + Math.cos(angle) * 11;
+          const y1 = 24 + Math.sin(angle) * 11;
+          const x2 = 24 + Math.cos(angle) * 17;
+          const y2 = 24 + Math.sin(angle) * 17;
 
-        return el("line", {
-          key: `sun-ray-${index}`,
-          x1: x1.toFixed(2),
-          y1: y1.toFixed(2),
-          x2: x2.toFixed(2),
-          y2: y2.toFixed(2),
-        });
-      })
+          return el("line", {
+            key: `sun-ray-${index}`,
+            x1: x1.toFixed(2),
+            y1: y1.toFixed(2),
+            x2: x2.toFixed(2),
+            y2: y2.toFixed(2),
+          });
+        })
+      )
     );
   }
 

@@ -2339,8 +2339,8 @@ input {
   animation: glyph-float 4.8s ease-in-out infinite;
 }
 
-.weather-glyph-sunny line {
-  transform-origin: 24px 24px;
+.weather-glyph-sunny .sun-rays-group {
+  transform-origin: center;
   animation: sun-ray-spin 14s linear infinite;
 }
 
