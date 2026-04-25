@@ -1,6 +1,6 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, memo } from 'react';
 
-export default function WindParticles({ speed = 10, direction = 90 }) {
+export default memo(function WindParticles({ speed = 10, direction = 90 }) {
   const canvasRef = useRef(null);
 
   useEffect(() => {
@@ -72,12 +72,8 @@ export default function WindParticles({ speed = 10, direction = 90 }) {
         ctx.moveTo(p.x, p.y);
         ctx.lineTo(tailX, tailY);
         
-        const grad = ctx.createLinearGradient(tailX, tailY, p.x, p.y);
-        grad.addColorStop(0, `rgba(255, 255, 255, 0)`);
-        grad.addColorStop(1, `rgba(255, 255, 255, ${p.opacity})`);
-        
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 2;
+        ctx.strokeStyle = `rgba(255, 255, 255, ${p.opacity})`;
+        ctx.lineWidth = 1.5;
         ctx.lineCap = 'round';
         ctx.stroke();
       });

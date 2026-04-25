@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from 'react';
-import { motion, useTransform, useSpring } from 'framer-motion';
+import React, { useEffect, memo } from 'react';
+import { motion, useTransform, useSpring, useMotionValue } from 'framer-motion';
 import './ScrollJourney.css';
 
-export default function ScrollJourney({ scrollYProgress, weather, theme }) {
+export default memo(function ScrollJourney({ scrollYProgress, weather, theme }) {
   // Smooth out the scroll progress slightly to avoid jank
   const smoothProgress = useSpring(scrollYProgress, { stiffness: 100, damping: 30, restDelta: 0.001 });
 
@@ -56,24 +56,29 @@ export default function ScrollJourney({ scrollYProgress, weather, theme }) {
   const rainOpacity = useTransform(smoothProgress, [0.2, 0.5, 0.9], [0, hasRain ? 1 : 0.2, hasRain ? 0.8 : 0]);
   
   // Lightning flashes in the storm section (between 0.6 and 0.9)
-  const [lightningFlash, setLightningFlash] = useState(0);
+  const lightningOpacity = useMotionValue(0);
 
   useEffect(() => {
     if (!hasRain) return;
     
+    let isFlashing = false;
     // Check scroll value directly for side effects
     const unsubscribe = smoothProgress.on("change", (latest) => {
-      if (latest > 0.6 && latest < 0.9) {
+      if (latest > 0.6 && latest < 0.9 && !isFlashing) {
         if (Math.random() > 0.98) {
-          setLightningFlash(1);
-          setTimeout(() => setLightningFlash(0), 100);
-          setTimeout(() => setLightningFlash(0.5), 150);
-          setTimeout(() => setLightningFlash(0), 200);
+          isFlashing = true;
+          lightningOpacity.set(1);
+          setTimeout(() => lightningOpacity.set(0), 100);
+          setTimeout(() => lightningOpacity.set(0.5), 150);
+          setTimeout(() => {
+            lightningOpacity.set(0);
+            setTimeout(() => { isFlashing = false; }, 300); // cooldown
+          }, 200);
         }
       }
     });
     return () => unsubscribe();
-  }, [smoothProgress, hasRain]);
+  }, [smoothProgress, hasRain, lightningOpacity]);
 
   // 6. FROST OVERLAY (Cold weather effect)
   const frostOpacity = useTransform(
@@ -100,7 +105,7 @@ export default function ScrollJourney({ scrollYProgress, weather, theme }) {
       {/* Lightning Flash */}
       <motion.div 
         className="lightning-flash" 
-        style={{ opacity: lightningFlash }} 
+        style={{ opacity: lightningOpacity }} 
       />
 
       {/* Stars Layer */}

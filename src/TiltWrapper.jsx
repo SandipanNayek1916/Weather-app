@@ -74,7 +74,8 @@ export default function TiltWrapper({
         rotateX,
         rotateY,
         scale,
-        transformStyle: "preserve-3d"
+        transformStyle: "preserve-3d",
+        willChange: "transform"
       }}
     >
       {children}

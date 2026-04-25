@@ -1665,7 +1665,7 @@ function WeatherGlyph(props) {
   );
 }
 
-function AmbientBackground(props) {
+const AmbientBackground = memo(function AmbientBackground(props) {
   const windFactor = clamp((Number(props.windSpeed || 0) - 4) / 26, 0, 1);
   const rainFactor = clamp(Number(props.rainAmount || 0) / 4, 0, 1);
   const cloudDuration = `${42 - windFactor * 18}s`;
@@ -1790,7 +1790,7 @@ function AmbientBackground(props) {
     el("div", { className: "ambient-radar-ring ambient-radar-ring-a" }),
     el("div", { className: "ambient-radar-ring ambient-radar-ring-b" })
   );
-}
+});
 
 function GaugeCard(props) {
   const safeValue = clamp(Number(props.value) || 0, 0, props.max);
@@ -3325,43 +3325,48 @@ function App() {
   }, []);
 
   useEffect(function trackPointer() {
+    let ticking = false;
+
     function handleMove(event) {
-      const x = event.clientX;
-      const y = event.clientY;
-      
-      // Update DOM perfectly at screen refresh rate bypassing React
-      document.documentElement.style.setProperty('--mouse-x', x + 'px');
-      document.documentElement.style.setProperty('--mouse-y', y + 'px');
-      document.documentElement.style.setProperty('--parallax-x', (((x / window.innerWidth) - 0.5) * 28) + 'px');
-      document.documentElement.style.setProperty('--parallax-y', (((y / window.innerHeight) - 0.5) * 20) + 'px');
+      if (!ticking) {
+        window.requestAnimationFrame(function () {
+          const x = event.clientX;
+          const y = event.clientY;
+          
+          // Update DOM perfectly at screen refresh rate bypassing React
+          document.documentElement.style.setProperty('--mouse-x', x + 'px');
+          document.documentElement.style.setProperty('--mouse-y', y + 'px');
+          document.documentElement.style.setProperty('--parallax-x', (((x / window.innerWidth) - 0.5) * 28) + 'px');
+          document.documentElement.style.setProperty('--parallax-y', (((y / window.innerHeight) - 0.5) * 20) + 'px');
 
-      // Spotlight effect for glass-card elements (theme-aware glow)
-      const card = event.target.closest('.glass-card');
-      if (card) {
-        const rect = card.getBoundingClientRect();
-        card.style.setProperty('--spot-x', (x - rect.left) + 'px');
-        card.style.setProperty('--spot-y', (y - rect.top) + 'px');
-        // Use current accent color for glow so it matches weather theme
-        const accentHex = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
-        const rgb = hexToRgb(accentHex);
-        const spotColor = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.18)` : 'rgba(82, 182, 255, 0.18)';
-        card.style.setProperty('--spot-color', spotColor);
-      }
+          // Spotlight effect for glass-card elements (theme-aware glow)
+          const card = event.target.closest('.glass-card');
+          if (card) {
+            const rect = card.getBoundingClientRect();
+            card.style.setProperty('--spot-x', (x - rect.left) + 'px');
+            card.style.setProperty('--spot-y', (y - rect.top) + 'px');
+            // Use fast native CSS color-mix instead of layout-thrashing JS computation
+            card.style.setProperty('--spot-color', 'color-mix(in srgb, var(--accent) 18%, transparent)');
+          }
 
-      setCursorState(state => {
-        if (!state.visible) return { visible: true };
-        return state;
-      });
+          setCursorState(state => {
+            if (!state.visible) return { visible: true };
+            return state;
+          });
 
-      if (!sparkleTimerRef.current) {
-        const nextId = sparkleIdRef.current;
-        sparkleIdRef.current += 1;
-        setSparkles(function addSparkle(items) {
-          return items.concat(createSparkle(nextId, x, y)).slice(-6);
+          if (!sparkleTimerRef.current) {
+            const nextId = sparkleIdRef.current;
+            sparkleIdRef.current += 1;
+            setSparkles(function addSparkle(items) {
+              return items.concat(createSparkle(nextId, x, y)).slice(-6);
+            });
+            sparkleTimerRef.current = window.setTimeout(function releaseSparkle() {
+              sparkleTimerRef.current = null;
+            }, 150);
+          }
+          ticking = false;
         });
-        sparkleTimerRef.current = window.setTimeout(function releaseSparkle() {
-          sparkleTimerRef.current = null;
-        }, 150);
+        ticking = true;
       }
     }
 
@@ -3369,8 +3374,8 @@ function App() {
       setCursorState(state => ({ visible: false }));
     }
 
-    window.addEventListener("pointermove", handleMove);
-    window.addEventListener("pointerleave", handleLeave);
+    window.addEventListener("pointermove", handleMove, { passive: true });
+    window.addEventListener("pointerleave", handleLeave, { passive: true });
 
     return function cleanup() {
       window.removeEventListener("pointermove", handleMove);
