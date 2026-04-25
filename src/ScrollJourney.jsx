@@ -150,4 +150,4 @@ export default memo(function ScrollJourney({ scrollYProgress, weather, theme }) 
       )}
     </motion.div>
   );
-}
+});

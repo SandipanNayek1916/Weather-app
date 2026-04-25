@@ -103,4 +103,4 @@ export default memo(function WindParticles({ speed = 10, direction = 90 }) {
       }}
     />
   );
-}
+});
