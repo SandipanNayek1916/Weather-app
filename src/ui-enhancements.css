@@ -512,7 +512,7 @@
   opacity: 1;
 }
 
-.app-shell-rain .ambient-scene::before { content: ''; position: absolute; inset: 0; background: url('/assets/ai_rainy_window.png') center/cover; opacity: 0.2; mix-blend-mode: overlay; z-index: -1; animation: pulseRainy 15s infinite alternate; }
+.app-shell-rain .ambient-scene::before { content: ''; position: absolute; inset: 0; background: url('/assets/ai_rainy_window.png') center/cover; opacity: 0.2; mix-blend-mode: overlay; z-index: -2; animation: pulseRainy 15s infinite alternate; }
 @keyframes pulseRainy { 0% { opacity: 0.15; filter: saturate(1.2); } 100% { opacity: 0.3; filter: saturate(1.8); } }
 
 .panel-section { content-visibility: auto; contain-intrinsic-size: 1px 1000px; }

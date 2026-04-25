@@ -17,6 +17,7 @@
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^1.8.0",
     "pigeon-maps": "^0.22.1",
+    "puppeteer": "^24.42.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.8.1",

@@ -4,7 +4,7 @@ import './SpotlightCard.css';
 import Lenis from '@studio-freight/lenis';
 // Auth and LoginModal removed — no sign-in feature needed
 import { LogOut, Star } from 'lucide-react';
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion';
+import { motion, useMotionValue, useSpring, useTransform, useScroll } from 'framer-motion';
 import NavFolder from './NavFolder.jsx';
 import AnimatedNumber from './AnimatedNumber.jsx';
 import SparkChart from './SparkChart.jsx';
@@ -12,8 +12,10 @@ import FloatingPill from './FloatingPill.jsx';
 import SkeletonLoader from './SkeletonLoader.jsx';
 import WindParticles from './WindParticles.jsx';
 import HoloCard from './HoloCard.jsx';
+import ScrollInsightCard from './ScrollInsightCard.jsx';
 import TiltWrapper from './TiltWrapper.jsx';
 import WeatherTicker from './WeatherTicker.jsx';
+import ScrollJourney from './ScrollJourney.jsx';
 import './ui-enhancements.css';
 
 const WeatherCharts = lazy(() => import('./WeatherCharts.jsx'));
@@ -35,8 +37,8 @@ const DEFAULT_LOCATION = {
   name: "Bardhaman",
   admin1: "West Bengal",
   country: "India",
-  latitude: 22.5726,
-  longitude: 88.3639,
+  latitude: 23.2324,
+  longitude: 87.8615,
 };
 
 const STORAGE_KEYS = {
@@ -3067,8 +3069,7 @@ function SmoothCursor() {
 
 function App() {
   // Auth removed — no sign-in feature
-
-
+  const { scrollYProgress } = useScroll();
   useEffect(function initLenis() {
     if (typeof Lenis !== "undefined") {
       const lenis = new Lenis({
@@ -3144,6 +3145,34 @@ function App() {
         fetchJson(buildWeatherUrl(location)),
         fetchJson(buildAirUrl(location)),
       ]);
+
+      // Sanitize inaccurate weather codes (e.g. Thunderstorm but 0% rain)
+      if (weather && weather.current) {
+        const themeInfo = WEATHER_CODE_MAP[weather.current.weather_code] || WEATHER_CODE_MAP[0];
+        if (weather.current.precipitation <= 0 && (themeInfo.theme === "rain" || themeInfo.theme === "storm" || themeInfo.theme === "rainy")) {
+          weather.current.weather_code = 3; // Fallback to overcast
+        }
+      }
+      
+      if (weather && weather.hourly && weather.hourly.weather_code) {
+        weather.hourly.weather_code = weather.hourly.weather_code.map(function sanitizeHour(code, i) {
+          const themeInfo = WEATHER_CODE_MAP[code] || WEATHER_CODE_MAP[0];
+          if (weather.hourly.precipitation_probability[i] <= 0 && (themeInfo.theme === "rain" || themeInfo.theme === "storm" || themeInfo.theme === "rainy")) {
+            return 3;
+          }
+          return code;
+        });
+      }
+      
+      if (weather && weather.daily && weather.daily.weather_code) {
+        weather.daily.weather_code = weather.daily.weather_code.map(function sanitizeDay(code, i) {
+          const themeInfo = WEATHER_CODE_MAP[code] || WEATHER_CODE_MAP[0];
+          if (weather.daily.precipitation_probability_max[i] <= 0 && (themeInfo.theme === "rain" || themeInfo.theme === "storm" || themeInfo.theme === "rainy")) {
+            return 3;
+          }
+          return code;
+        });
+      }
 
       setSelectedLocation(location);
       setWeatherPayload(weather);
@@ -3802,6 +3831,11 @@ function App() {
         {
           className: `app-shell app-shell-${theme} app-shell-accent-ocean app-shell-cinematic`,
         },
+        el(ScrollJourney, {
+          scrollYProgress: scrollYProgress,
+          weather: weatherPayload,
+          theme: theme
+        }),
         el(AmbientBackground, {
           theme,
           isDay: Boolean(weatherPayload.current.is_day),
@@ -3899,6 +3933,7 @@ function App() {
             metric: chartMetric,
             onMetricChange: setChartMetric,
           }),
+          el(ScrollInsightCard, { weather: weatherPayload, location: selectedLocation }),
           el(HourlySection, { items: hourlyItems }),
           el(ForecastSection, { items: dailyItems, currentCityTime: weatherPayload.current.time }),
           el(ComparisonSection, {
